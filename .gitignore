@@ -1,0 +1,11 @@
+# Large source/media artifacts
+raw/
+audio/
+local-runs/
+
+# Failed or provider-specific API responses
+transcripts/*.raw.json
+
+# Local scratch files
+.venv/
+__pycache__/

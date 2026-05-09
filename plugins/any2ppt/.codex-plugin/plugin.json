@@ -1,0 +1,34 @@
+{
+  "name": "any2ppt",
+  "version": "0.1.0",
+  "description": "A practical production workflow for turning source material into presentation-ready deck briefs, storyboards, and slide visual prompts.",
+  "author": {
+    "name": "fores"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "presentations",
+    "slides",
+    "deck",
+    "storyboard",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Any2PPT",
+    "shortDescription": "Turn source material into presentation-ready deck plans.",
+    "longDescription": "Any2PPT coordinates a budget-aware deck production workflow: understand source material, shape the argument, plan slide storyboards, direct visuals, and check the result before delivery.",
+    "developerName": "fores",
+    "category": "Productivity",
+    "capabilities": [
+      "Analyze",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Turn this transcript into a deck storyboard.",
+      "Create slide prompts from this outline.",
+      "Review this deck plan for weak slides."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
