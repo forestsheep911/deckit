@@ -2,10 +2,13 @@
 raw/
 audio/
 local-runs/
+dist/
 
 # Failed or provider-specific API responses
 transcripts/*.raw.json
 
 # Local scratch files
 .venv/
+tools/.venv/
 __pycache__/
+.ruff_cache/
