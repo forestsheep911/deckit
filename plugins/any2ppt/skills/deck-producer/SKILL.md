@@ -17,6 +17,26 @@ Act as the production owner for Any2PPT deck work. Optimize for a usable present
 
 Use `../../references/workflow.md` for the production flow and `../../references/budget-modes.md` for budget decisions.
 
+## Text Input V1
+
+For `.md`, `.markdown`, or `.txt` sources, prefer the standard local run shape:
+
+- `source/input.md` or `source/input.txt`
+- `work/deck-brief.md`
+- `work/storyboard.md`
+- `prompts/README.md`
+- `prompts/<slide-id>.md`
+- `dist/`
+
+When the repository development tool is available, create the run folder with:
+
+```powershell
+cd tools
+uv run any2ppt-dev new-run --source ..\path\to\source.md --name run-name
+```
+
+Use the run folder as the working root for specialist outputs.
+
 ## Specialist Routing
 
 - Use `story-architect` when raw source material needs a deck-level thesis and narrative structure.

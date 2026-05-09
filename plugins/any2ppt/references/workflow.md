@@ -8,6 +8,34 @@
 4. `visual-director` creates visual treatments or `prompts/*.md`.
 5. `deck-producer` performs a final quality check and summarizes deliverables.
 
+## Text Input V1
+
+For v1, prefer a standard run folder for text sources:
+
+```text
+local-runs/<run-name>/
+├── run.json
+├── source/
+│   └── input.md
+├── work/
+├── prompts/
+└── dist/
+```
+
+Create it with the development tool when available:
+
+```powershell
+cd tools
+uv run any2ppt-dev new-run --source ..\source.md --name run-name
+```
+
+Then produce artifacts inside that run folder:
+
+- `work/deck-brief.md`
+- `work/storyboard.md`
+- `prompts/README.md`
+- `prompts/<slide-id>.md`
+
 ## Skip Rules
 
 - If the user already provides a strong deck brief, skip source analysis.

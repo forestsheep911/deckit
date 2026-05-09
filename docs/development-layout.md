@@ -54,6 +54,27 @@ Development tools may read `../plugins/any2ppt/`, but should not be required for
 
 This keeps successful examples available locally without making them plugin source.
 
+Create a standard text-input run with:
+
+```powershell
+cd tools
+uv run any2ppt-dev new-run --source ..\path\to\source.md --name topic-name
+```
+
+The command creates:
+
+```text
+local-runs/topic-name/
+├── run.json
+├── source/
+│   └── input.md
+├── work/
+├── prompts/
+└── dist/
+```
+
+Use `work/` for `deck-brief.md` and `storyboard.md`, `prompts/` for visual prompt packs, and `dist/` for generated deliverables from that run.
+
 ## Release Artifacts
 
 `dist/` is ignored by git. Use it for generated plugin packages, export bundles, or other publication artifacts.
