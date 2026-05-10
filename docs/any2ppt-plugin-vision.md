@@ -8,6 +8,8 @@ The plugin should not start as a large automation system. Its first job is to pr
 
 The long-term product can grow into a configurable local tool with style systems, budget choices, source adapters, PPTX assembly, and review loops. Version 1 should stay small enough to use, inspect, and improve.
 
+See `docs/production-mode-insights.md` for the early distinction between image-first, PPTX-native, and hybrid production modes.
+
 ## Product Principle
 
 Any2PPT should behave like a practical production team, not like an unconstrained generator.
@@ -236,9 +238,10 @@ Candidate product parameters:
 
 - Budget: quick, balanced, premium.
 - Output: brief, storyboard, prompts, images, PPTX.
+- Production mode: image-first, PPTX-native, hybrid.
 - Style: editorial, consulting, academic, cinematic, product pitch.
 - Language: Simplified Chinese, Traditional Chinese, English, bilingual.
-- Editability: image-first, PPTX-native, hybrid.
+- Editability: visual artifact, editable native deck, mixed editable overlays.
 - Review depth: none, checklist, rendered visual review, multi-pass critique.
 
 ## Non-Goals
