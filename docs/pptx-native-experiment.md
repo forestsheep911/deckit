@@ -101,3 +101,11 @@ That sequence will cost more up front but pay off across every later archetype, 
 - Code: [tools/src/any2ppt_dev/pptx_draft.py](../tools/src/any2ppt_dev/pptx_draft.py)
 - Subcommand wiring: [tools/src/any2ppt_dev/cli.py](../tools/src/any2ppt_dev/cli.py)
 - Generated draft: `local-runs/smoke-text-input/dist/draft.pptx` (gitignored; reproduce with the command above).
+
+## Post-Experiment Field Note (2026-05-10)
+
+A separate, third-party native-PPTX run was performed using the official Codex `Presentations` plugin (a different system than Any2PPT, but the same production mode) on the sanmiao Victory Day topic, and compared head-to-head with the Any2PPT image-first sample. Test workspace: `C:\Users\fores\Documents\New project 3`.
+
+The field comparison reinforced the W4 conclusion (image-first wins on first impression) and added a sharper concern about pptx-native's strategic value: editability is only useful if the draft is good enough to edit rather than redo. The Route B pivot recorded above is unchanged; the V2 case for `pptx-assembler` now needs to clear additional bars before resuming.
+
+See [production-mode-insights.md, "Updated View — Field Validation"](production-mode-insights.md#updated-view--field-validation-codex-presentations-plugin) for the full note, including the three concrete bars (draft-quality threshold, edit-faster-than-regenerate, source-risk parity) and the image-first patterns that the side-by-side validated as keepers.

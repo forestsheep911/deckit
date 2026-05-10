@@ -86,7 +86,7 @@ Six subcommands:
 
 The Week 4 decision and Week 5 result reorder the V2 backlog from the original vision:
 
-1. **`pptx-assembler` (with theme + layout system first)** — earned its priority by being the work that V1 deliberately did not do; V2 should front-load the theme/layout foundations rather than chase one-archetype-at-a-time.
+1. **`pptx-assembler` (with theme + layout system first; bar-of-entry now higher)** — earned its priority by being the work that V1 deliberately did not do; V2 should front-load the theme/layout foundations rather than chase one-archetype-at-a-time. Status downgraded from "front-loaded" to "needs to clear new bars before reopening" after the 2026-05-10 field comparison against the Codex Presentations plugin (native PPTX produced was below stage-ready quality even with a more mature engine). See [production-mode-insights.md, "Updated View — Field Validation"](production-mode-insights.md#updated-view--field-validation-codex-presentations-plugin) for the three concrete bars (draft-quality threshold, edit-faster-than-regenerate, source-risk parity) that V2 should clear before any pptx-assembler work resumes.
 2. **`document-ingestor` v2** — add OCR fallback for image-only PDFs and a JavaScript-rendered URL fetcher (likely Playwright-backed). Both came up as W5 limitations.
 3. **`style-director`** — emerges naturally as a partner to `pptx-assembler`. Image-first decks would benefit too.
 4. **`youtube-ingestor`** — high user value but requires audio pipeline + transcription; treat as a separate vertical.
