@@ -24,9 +24,16 @@ Mode decides what kind of artifact the deck eventually becomes; budget decides h
 
 Three modes:
 
-- **image-first** — `visual-director` writes complete per-slide image prompts; the final deck is a sequence of generated full-slide images. Use when visual polish matters more than downstream editing.
+- **image-first** — `visual-director` writes complete per-slide image-generation prompts; the final deck is a sequence of generated full-slide images. Use when visual polish matters more than downstream editing. The images must come from an image-generation step (for example the available image-generation tool/model). Do not satisfy image-first by drawing slides with PIL/canvas/HTML/SVG/PowerPoint shapes and then exporting screenshots.
 - **pptx-native** — `visual-director` writes layout, chart, table, and image needs (no full image prompts). The final deck is an editable PowerPoint file assembled by `pptx-assembler` (V2 work; the V1 `any2ppt-dev pptx draft` subcommand is an experimental two-archetype prototype, not a production assembler — see [docs/pptx-native-experiment.md](../../../../docs/pptx-native-experiment.md)). Use when the user wants to keep editing in PowerPoint.
 - **hybrid** — combination. Each slide is explicitly tagged image-first or pptx-native in the storyboard. Use when some slides need visual polish and others need editability.
+
+Image-first anti-confusion rule:
+
+- A `.pptx` containing one full-slide PNG per slide is only a **packaging format** after the images already exist. It does not prove image-first generation by itself.
+- Programmatically drawing slide PNGs with local code (PIL, matplotlib, browser screenshots, SVG, HTML/CSS, or PowerPoint shapes) is `programmatic-render` / `pptx-native-adjacent`, not image-first generation.
+- If the user asks to "generate images", "use gpt-image", "use gpt-image-2", or "image-first", call or hand off to the image-generation capability for each slide image, then store the resulting PNGs under a path such as `assets/generated-slides/`.
+- If image generation is not available, stop after prompt production and say that generated slide images are pending; do not fake the generation step with local drawing code.
 
 Mode selection rules:
 
@@ -91,6 +98,8 @@ Image-first mode (default if mode cannot be confirmed):
 - `work/storyboard.md`
 - `prompts/README.md`
 - `prompts/<slide-id>.md`
+- `assets/generated-slides/<slide-id>.png` only after an actual image-generation step has run (optional in V1, required if the user asked for generated slide images)
+- `dist/<deck-name>.pptx` only as an optional container around generated images, not as the primary image-generation method
 
 PPTX-native mode:
 
@@ -112,6 +121,7 @@ Before delivery, verify that:
 - Slide titles are specific and presentable.
 - The sequence has a logical arc.
 - Visual direction supports the argument.
+- In image-first mode, generated PNGs came from an image-generation step if the run claims to have generated images.
 - The chosen workflow fits the user's budget and timing.
 - Production mode is recorded in `run.json` and the brief's "Skill Notes".
 

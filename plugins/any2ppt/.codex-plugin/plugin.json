@@ -1,6 +1,6 @@
 {
   "name": "any2ppt",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A practical production workflow for turning text, PDF, or URL source material into presentation-ready deck briefs, storyboards, and per-slide visual direction. Mode-aware (image-first / pptx-native / hybrid) with rule-based quality review.",
   "author": {
     "name": "fores"

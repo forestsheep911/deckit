@@ -38,7 +38,7 @@ Default scope:
 - Deck brief.
 - Slide storyboard.
 - Visual direction.
-- Generated images or PPTX assembly when tools are available.
+- Generated images or PPTX assembly when tools are available. In image-first mode, "generated images" means images produced by an image-generation model/tool, not locally rendered screenshots or PIL/canvas output.
 - Render or screenshot review.
 - Iteration on weak slides.
 

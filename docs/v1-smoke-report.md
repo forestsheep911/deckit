@@ -86,3 +86,30 @@ Ironically, the source document itself names the production-mode trade-off (imag
 ## Verdict
 
 The walk-through ran end-to-end. All four artifact families exist and are coherent. The skills hold their boundaries. The two real-blocking issues (mode not chosen, gate not enforced) are exactly what the rest of the roadmap addresses. The smoke run is a green light to proceed with the W1 second deliverable and W2.
+
+## 2026-05-11 Image-First Generation Follow-up
+
+A later smoke run, `local-runs/smoke-current/` (gitignored), extended the original image-first artifact loop into actual bitmap generation:
+
+- Source: `docs/any2ppt-plugin-vision.md`.
+- Production mode: `image-first`.
+- Budget mode: `balanced`.
+- Generated artifacts:
+  - `work/deck-brief.md`
+  - `work/storyboard.md`
+  - `prompts/README.md`
+  - `prompts/00_cover.md` ... `prompts/07_closing.md`
+  - `assets/generated-slides/00_cover.png` ... `assets/generated-slides/07_closing.png`
+  - `dist/review.md`
+  - `dist/image-first-review.md`
+
+Result:
+
+- `any2ppt-dev review --run local-runs/smoke-current` passed with 0 errors and 0 warnings.
+- Eight slide PNGs were generated with external image generation and copied into the run folder.
+- The first cover generation misspelled `Storyboard`; one regeneration fixed it. This confirms the known image-first risk: generated text must be checked, and prompt-side spelling constraints reduce but do not remove the risk.
+
+Boundary:
+
+- This follow-up validates the full image-first production loop for testing.
+- It does not mean the plugin itself now calls an image-generation API. Automatic image generation remains outside V1; the V1 plugin produces prompt packs and expects an external generation step.
