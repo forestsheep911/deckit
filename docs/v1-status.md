@@ -1,12 +1,12 @@
-# Any2PPT V1 Status — v0.3.0
+# Any2PPT V1 Status — v0.3.2
 
 This is the closing report for the six-week V1 validation roadmap defined in [v1-roadmap.md](v1-roadmap.md). It records what shipped, what did not, and what is queued for V2+.
 
-> Current release note: v0.3.0 narrows the active plugin route to image-first generation only. Historical alternate-output research remains in archived docs, but those routes are no longer offered by the plugin skills or dev CLI.
+> Current release note: v0.3.2 narrows the active plugin route to image-first generation only and adds review checks that reject native-PPTX fallbacks masquerading as image-first output. Historical alternate-output research remains in archived docs, but those routes are no longer offered by the plugin skills or dev CLI.
 
 ## V1 At a Glance
 
-- Plugin version: **0.3.0** (was 0.1.0 at the start of the roadmap; v0.3.0 makes image-first generation the only active path).
+- Plugin version: **0.3.2** (was 0.1.0 at the start of the roadmap; v0.3.x makes image-first generation the only active path).
 - Specialist skills: **5** (was 4).
   - `deck-producer`, `story-architect`, `slide-storyboarder`, `visual-director` (V1 originals).
   - `document-ingestor` (added in Week 5 as the post-W4 route).
@@ -19,7 +19,7 @@ This is the closing report for the six-week V1 validation roadmap defined in [v1
 ```text
 === INSPECT ===
 plugin: any2ppt
-version: 0.3.0
+version: 0.3.2
 skills: 5
 - deck-producer: skills\deck-producer
 - document-ingestor: skills\document-ingestor
@@ -99,7 +99,7 @@ The Week 4 decision and Week 5 result reorder the V2 backlog from the original v
 
 - A new reader can produce the first deck-brief and storyboard within one hour using `install-and-use.md`. (Validated in W2; the actual time was under 15 minutes for a 5-slide topic.)
 - No conflicting terminology between SKILL.md and references (`production_mode` vs `budget_mode` are uniformly named after the W6 sweep).
-- Both `any2ppt-dev inspect` and `inspect-marketplace` (in-repo and cross-repo) pass with the v0.3.0 manifest.
+- Both `any2ppt-dev inspect` and `inspect-marketplace` pass with the v0.3.2 manifest.
 - The quality gate is callable, not aspirational: `any2ppt-dev review` produced findings on every test run during the roadmap.
 - The image-first artifact loop has been exercised through actual bitmap generation once: 8 PNG slides were generated from `prompts/*.md`, copied into the run folder, and reviewed in `dist/image-first-review.md`.
 

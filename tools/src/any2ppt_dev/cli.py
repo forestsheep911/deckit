@@ -383,6 +383,60 @@ def _scan_prompts(run_dir: Path, storyboard_ids: list[str]) -> list[tuple[str, s
             findings.append(("warn", "PROMPT-ORPHAN", f"prompt prompts/{pid}.md has no matching storyboard slide"))
     return findings
 
+
+def _scan_image_first_artifacts(run_dir: Path, storyboard_ids: list[str]) -> list[tuple[str, str, str]]:
+    findings: list[tuple[str, str, str]] = []
+    generated_dir = run_dir / "assets" / "generated-slides"
+    generated_pngs = sorted(generated_dir.glob("*.png")) if generated_dir.is_dir() else []
+    generated_ids = {p.stem for p in generated_pngs}
+    dist_pptx = sorted((run_dir / "dist").glob("*.pptx")) if (run_dir / "dist").is_dir() else []
+
+    if dist_pptx and not generated_pngs:
+        pptx_names = ", ".join(p.name for p in dist_pptx)
+        findings.append(
+            (
+                "error",
+                "IMG-FIRST-PPTX-WITHOUT-GENERATED-SLIDES",
+                f"dist contains PPTX deliverable(s) ({pptx_names}) but assets/generated-slides has no PNGs from $imagegen",
+            )
+        )
+
+    for sid in storyboard_ids:
+        if generated_pngs and sid not in generated_ids:
+            findings.append(
+                (
+                    "error",
+                    "IMG-FIRST-GENERATED-SLIDE-MISSING",
+                    f"slide {sid} has no generated image at assets/generated-slides/{sid}.png",
+                )
+            )
+    for image_id in sorted(generated_ids - set(storyboard_ids)):
+        findings.append(
+            (
+                "warn",
+                "IMG-FIRST-GENERATED-SLIDE-ORPHAN",
+                f"generated image assets/generated-slides/{image_id}.png has no matching storyboard slide",
+            )
+        )
+
+    scripts_dir = run_dir / "scripts"
+    if scripts_dir.is_dir():
+        for script_path in sorted(scripts_dir.glob("*.py")):
+            try:
+                text = script_path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            if re.search(r"^\s*(from|import)\s+pptx\b", text, re.MULTILINE):
+                findings.append(
+                    (
+                        "error",
+                        "IMG-FIRST-NATIVE-PPTX-SCRIPT",
+                        f"{script_path.relative_to(run_dir)} imports python-pptx; image-first runs must use $imagegen before optional PNG packaging",
+                    )
+                )
+    return findings
+
+
 def review(run_dir: Path) -> int:
     run_dir = run_dir.resolve()
     if not run_dir.is_dir():
@@ -418,6 +472,8 @@ def review(run_dir: Path) -> int:
     if storyboard_ids and isinstance(budget, str):
         findings.extend(_scan_slide_count(budget, len(storyboard_ids)))
     findings.extend(_scan_prompts(run_dir, storyboard_ids))
+    if mode == "image-first":
+        findings.extend(_scan_image_first_artifacts(run_dir, storyboard_ids))
 
     counts = {"error": 0, "warn": 0}
     for sev, _, _ in findings:
