@@ -19,7 +19,7 @@ Write a deck brief, usually at `work/deck-brief.md`, with:
 - Section outline.
 - Material to exclude or compress.
 - Risks, assumptions, or fact-check needs.
-- Skill Notes (optional last section): record decisions that affect downstream specialists, including the chosen production mode and budget mode, deviations from defaults, and any limitations of the source.
+- Skill Notes (optional last section): record decisions that affect downstream specialists, including the chosen production mode, budget/quality mode, final delivery target (`pptx` or `pdf`), target slide/page count, accepted preflight rough outline, standard preview expectation, deviations from defaults, and any limitations of the source.
 
 Do not write slide titles or visual descriptions in the brief; those are the jobs of `slide-storyboarder` and `visual-director`.
 
@@ -32,6 +32,9 @@ Do not write slide titles or visual descriptions in the brief; those are the job
 - When the source is long, summarize by argument relevance, not by chronology alone.
 - If the source is dominated by negation ("what not to do"), propose at least one positive framing in the brief so the storyboard does not inherit a negative tone by default.
 - If the source is too thin to support a deck (single paragraph, placeholder content, etc.), say so in the brief and recommend either aborting the run or finding a richer source. Do not invent a deck around an empty source.
+- If deck-producer ran a preflight clarification, preserve the user's answers and accepted rough outline as constraints. Do not silently replace them with a different narrative framing.
+- If the user accepted defaults for unanswered preflight items, record those defaults explicitly so downstream steps know they were inferred rather than user-specified.
+- If the user's original prompt already contained quality, audience/goal, page count, structure, or delivery-format constraints, treat those as first-class user constraints. Do not describe them as assumptions or ask downstream steps to reconfirm them.
 
 ## Reference Sample
 

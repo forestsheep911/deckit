@@ -12,10 +12,11 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_PLUGIN = REPO_ROOT / "plugins" / "deckit"
-DEFAULT_RUNS_DIR = REPO_ROOT / "local-runs"
+DEFAULT_RUNS_DIR = Path.cwd() / "outputs"
 DEFAULT_MARKETPLACE = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
 TEXT_SOURCE_SUFFIXES = {".md", ".markdown", ".txt"}
 PRODUCTION_MODES = ("image-first",)
+DELIVERY_TARGETS = ("pptx", "pdf")
 
 
 def _load_skill_frontmatter(skill_md: Path) -> dict[str, object]:
@@ -132,6 +133,8 @@ def new_run(
     force: bool,
     mode: str | None,
     budget: str | None,
+    delivery_target: str | None,
+    target_slides: int | None,
 ) -> int:
     mode = mode or "image-first"
     kind = _classify_source(source)
@@ -163,6 +166,7 @@ def new_run(
         "generated_slides": "assets/generated-slides/<slide-id>.png",
     }
     artifacts["dist"] = "dist/"
+    artifacts["preview"] = "dist/preview.png"
     artifacts["review"] = "dist/review.md"
 
     children: list[str] = ["source", "work", "prompts", "assets/generated-slides", "dist"]
@@ -197,6 +201,10 @@ def new_run(
         },
         "production_mode": mode,
         "budget_mode": budget,
+        "requested_output": {
+            "delivery_target": delivery_target,
+            "target_slide_count": target_slides,
+        },
         "artifacts": artifacts,
     }
     (run_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -208,6 +216,14 @@ def new_run(
         print("budget_mode: not set")
     else:
         print(f"budget_mode: {budget}")
+    if delivery_target is None:
+        print("delivery_target: not set")
+    else:
+        print(f"delivery_target: {delivery_target}")
+    if target_slides is None:
+        print("target_slide_count: not set")
+    else:
+        print(f"target_slide_count: {target_slides}")
     print("next artifacts:")
     for artifact in artifacts.values():
         print(f"- {artifact}")
@@ -456,6 +472,25 @@ def _scan_slide(slide_id: str, body: str) -> list[tuple[str, str, str]]:
     return findings
 
 
+def _scan_requested_slide_count(target_slides: object, slide_count: int) -> list[tuple[str, str, str]]:
+    if target_slides is None:
+        return []
+    if not isinstance(target_slides, int):
+        return [("warn", "DECK-TARGET-SLIDES-TYPE", f"requested_output.target_slide_count should be an integer, got {type(target_slides).__name__}")]
+    if target_slides <= 0:
+        return [("warn", "DECK-TARGET-SLIDES-RANGE", f"requested_output.target_slide_count should be positive, got {target_slides}")]
+    tolerance = 0 if target_slides == 1 else 1
+    if abs(slide_count - target_slides) <= tolerance:
+        return []
+    return [
+        (
+            "warn",
+            "DECK-TARGET-SLIDES",
+            f"slide count {slide_count} is outside the requested target_slide_count {target_slides} ± {tolerance}",
+        )
+    ]
+
+
 def _scan_slide_count(budget: str | None, slide_count: int) -> list[tuple[str, str, str]]:
     if not budget:
         return []
@@ -660,6 +695,7 @@ def _scan_image_first_artifacts(run_dir: Path, storyboard_ids: list[str]) -> lis
     generated_pngs = sorted(generated_dir.glob("*.png")) if generated_dir.is_dir() else []
     generated_ids = {p.stem for p in generated_pngs}
     dist_pptx = _find_pptx_deliverables(run_dir)
+    preview_path = run_dir / "dist" / "preview.png"
 
     if dist_pptx and not generated_pngs:
         pptx_names = ", ".join(p.name for p in dist_pptx)
@@ -700,6 +736,15 @@ def _scan_image_first_artifacts(run_dir: Path, storyboard_ids: list[str]) -> lis
                 "warn",
                 "IMG-FIRST-GENERATED-SLIDE-ORPHAN",
                 f"generated image assets/generated-slides/{image_id}.png has no matching storyboard slide",
+            )
+        )
+
+    if storyboard_ids and set(storyboard_ids).issubset(generated_ids) and not preview_path.is_file():
+        findings.append(
+            (
+                "warn",
+                "IMG-FIRST-PREVIEW-MISSING",
+                "generated slide PNGs are complete but the standard preview is missing at dist/preview.png",
             )
         )
 
@@ -782,9 +827,163 @@ def _package_images(run_dir: Path, out_path: Path | None) -> int:
         if not slide.has_notes_slide or not slide.notes_slide.notes_text_frame.text.strip():
             raise ValueError(f"packaged PPTX slide {idx} is missing speaker notes")
 
+    preview_path = _package_preview(run_dir, None)
+
     print(f"wrote: {out_path}")
     print(f"slides packaged: {len(slide_ids)}")
     print("mode: image-first PNG container; no editable native PowerPoint slide content; speaker notes included")
+    print(f"preview: {preview_path}")
+    return 0
+
+
+def _find_pdf_deliverables(run_dir: Path) -> list[Path]:
+    candidates: list[Path] = []
+    for folder in (run_dir / "dist", run_dir):
+        if folder.is_dir():
+            candidates.extend(p for p in folder.glob("*.pdf") if not p.name.startswith("~$"))
+    return sorted(set(candidates))
+
+
+def _scan_requested_delivery_artifact(run_dir: Path, delivery_target: object) -> list[tuple[str, str, str]]:
+    if delivery_target is None:
+        return []
+    if delivery_target == "pptx":
+        if not _find_pptx_deliverables(run_dir):
+            return [("error", "DELIVERY-PPTX-MISSING", "requested final delivery target is pptx but no PPTX was found in dist/")]
+        return []
+    if delivery_target == "pdf":
+        if not _find_pdf_deliverables(run_dir):
+            return [("error", "DELIVERY-PDF-MISSING", "requested final delivery target is pdf but no PDF was found in dist/")]
+        return []
+    return []
+
+
+def _require_generated_slide_images(run_dir: Path) -> tuple[list[str], list[Path]]:
+    """Return storyboard-ordered generated slide PNGs, failing if any are missing."""
+    run_dir = run_dir.resolve()
+    if not run_dir.is_dir():
+        raise NotADirectoryError(f"run directory does not exist: {run_dir}")
+
+    slide_blocks, sb_findings = _parse_storyboard(run_dir / "work" / "storyboard.md")
+    errors = [finding for finding in sb_findings if finding[0] == "error"]
+    if errors:
+        detail = "; ".join(message for _, _, message in errors)
+        raise ValueError(f"cannot package generated slide images because storyboard is invalid: {detail}")
+
+    slide_ids = [slide_id for slide_id, _ in slide_blocks]
+    if not slide_ids:
+        raise ValueError("cannot package generated slide images because storyboard contains no slides")
+
+    generated_dir = run_dir / "assets" / "generated-slides"
+    image_paths = [generated_dir / f"{slide_id}.png" for slide_id in slide_ids]
+    missing = [path for path in image_paths if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "cannot package before every storyboard slide has a generated PNG. Missing: "
+            + ", ".join(str(path.relative_to(run_dir)) for path in missing)
+        )
+    return slide_ids, image_paths
+
+
+def _resolve_dist_output(run_dir: Path, out_path: Path | None, suffix: str) -> Path:
+    if out_path is None:
+        out_path = run_dir / "dist" / f"{run_dir.name}{suffix}"
+    elif not out_path.is_absolute():
+        out_path = (run_dir / out_path).resolve()
+    else:
+        out_path = out_path.resolve()
+
+    dist_dir = run_dir / "dist"
+    dist_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_inside(dist_dir, out_path)
+    return out_path
+
+
+def _package_pdf(run_dir: Path, out_path: Path | None) -> int:
+    """Package generated slide PNGs into an image-only PDF, one slide image per page."""
+    run_dir = run_dir.resolve()
+    slide_ids, image_paths = _require_generated_slide_images(run_dir)
+    out_path = _resolve_dist_output(run_dir, out_path, ".pdf")
+
+    try:
+        from PIL import Image, JpegImagePlugin  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for PDF packaging.") from exc
+
+    rgb_pages = []
+    for image_path in image_paths:
+        with Image.open(image_path) as image:
+            page = image.convert("RGB")
+            rgb_pages.append(page.copy())
+
+    first, rest = rgb_pages[0], rgb_pages[1:]
+    first.save(out_path, save_all=True, append_images=rest)
+
+    preview_path = _package_preview(run_dir, None)
+
+    print(f"wrote: {out_path}")
+    print(f"pages packaged: {len(slide_ids)}")
+    print("mode: image-first PNG pages packaged as an image-only PDF")
+    print(f"preview: {preview_path}")
+    return 0
+
+
+def _package_preview(run_dir: Path, out_path: Path | None, width: int = 900, gap: int = 24, background: str = "white") -> Path:
+    """Create the standard medium-size vertical preview PNG from generated slide images."""
+    run_dir = run_dir.resolve()
+    slide_ids, image_paths = _require_generated_slide_images(run_dir)
+    if out_path is None:
+        out_path = run_dir / "dist" / "preview.png"
+    else:
+        out_path = _resolve_dist_output(run_dir, out_path, ".png")
+    out_path = out_path.resolve()
+    dist_dir = run_dir / "dist"
+    dist_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_inside(dist_dir, out_path)
+    if width <= 0:
+        raise ValueError(f"width must be positive, got {width}")
+    if gap < 0:
+        raise ValueError(f"gap must be non-negative, got {gap}")
+
+    try:
+        from PIL import Image, ImageColor
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for preview image packaging.") from exc
+
+    try:
+        fill = ImageColor.getrgb(background)
+    except ValueError as exc:
+        raise ValueError(f"background must be a Pillow-compatible color, got {background!r}") from exc
+
+    preview_slides = []
+    for image_path in image_paths:
+        with Image.open(image_path) as image:
+            slide = image.convert("RGB")
+            if slide.width > width:
+                height = round(slide.height * (width / slide.width))
+                slide = slide.resize((width, height), Image.Resampling.LANCZOS)
+            preview_slides.append(slide.copy())
+
+    max_width = max(image.width for image in preview_slides)
+    total_height = sum(image.height for image in preview_slides) + gap * (len(preview_slides) - 1)
+    canvas = Image.new("RGB", (max_width, total_height), fill)
+
+    y = 0
+    for image in preview_slides:
+        x = (max_width - image.width) // 2
+        canvas.paste(image, (x, y))
+        y += image.height + gap
+
+    canvas.save(out_path)
+    return out_path
+
+
+def _package_preview_command(run_dir: Path, out_path: Path | None, width: int, gap: int, background: str) -> int:
+    """CLI wrapper for the standard vertical preview PNG."""
+    preview_path = _package_preview(run_dir, out_path, width=width, gap=gap, background=background)
+    print(f"wrote: {preview_path}")
+    print(f"preview: {preview_path}")
+    print("mode: standard medium-size vertical preview generated from slide PNGs")
     return 0
 
 
@@ -830,7 +1029,22 @@ def review(run_dir: Path) -> int:
 
     storyboard_ids = [sid for sid, _ in slide_blocks]
     budget = manifest.get("budget_mode") if isinstance(manifest, dict) else None
-    if storyboard_ids and isinstance(budget, str):
+    requested_output = manifest.get("requested_output") if isinstance(manifest, dict) else None
+    delivery_target = requested_output.get("delivery_target") if isinstance(requested_output, dict) else None
+    target_slides = requested_output.get("target_slide_count") if isinstance(requested_output, dict) else None
+    if delivery_target is not None and delivery_target not in DELIVERY_TARGETS:
+        findings.append(
+            (
+                "warn",
+                "DECK-DELIVERY-TARGET",
+                f"requested_output.delivery_target '{delivery_target}' is not one of {DELIVERY_TARGETS}",
+            )
+        )
+    else:
+        findings.extend(_scan_requested_delivery_artifact(run_dir, delivery_target))
+    if storyboard_ids:
+        findings.extend(_scan_requested_slide_count(target_slides, len(storyboard_ids)))
+    if storyboard_ids and isinstance(budget, str) and target_slides is None:
         findings.extend(_scan_slide_count(budget, len(storyboard_ids)))
     findings.extend(_scan_prompts(run_dir, storyboard_ids))
     if mode == "image-first":
@@ -847,6 +1061,9 @@ def review(run_dir: Path) -> int:
     lines: list[str] = []
     lines.append(f"# Review Report — {run_dir.name}\n\n")
     lines.append(f"- Production mode: `{mode if mode else 'unset'}`\n")
+    if isinstance(requested_output, dict):
+        lines.append(f"- Final delivery target: `{requested_output.get('delivery_target') or 'unset'}`\n")
+        lines.append(f"- Target slide count: `{requested_output.get('target_slide_count') or 'unset'}`\n")
     lines.append(f"- Slides found in storyboard: {len(storyboard_ids)}\n")
     lines.append(f"- Findings: {counts['error']} error(s), {counts['warn']} warning(s)\n\n")
     if not findings:
@@ -875,7 +1092,12 @@ def main() -> int:
     new_run_parser = subparsers.add_parser("new-run", help="Create a standard local run directory from a text, PDF, or URL source")
     new_run_parser.add_argument("--source", required=True, help="Path to a text/Markdown file, a .pdf file, or an http(s) URL")
     new_run_parser.add_argument("--name", help="Run name. Defaults to the source filename stem (or URL host+path).")
-    new_run_parser.add_argument("--runs-dir", type=Path, default=DEFAULT_RUNS_DIR)
+    new_run_parser.add_argument(
+        "--runs-dir",
+        type=Path,
+        default=DEFAULT_RUNS_DIR,
+        help="Directory that will contain run folders. Defaults to ./outputs in the current working directory; pass the caller workspace's outputs directory when invoking from a plugin/dev checkout.",
+    )
     new_run_parser.add_argument("--force", action="store_true", help="Reuse an existing run directory and replace source copy")
     new_run_parser.add_argument(
         "--mode",
@@ -884,6 +1106,8 @@ def main() -> int:
         help="Deprecated compatibility flag. Deckit always uses image-first; no other production modes are valid.",
     )
     new_run_parser.add_argument("--budget", choices=("quick", "balanced", "premium"), help="Budget mode (recorded in run.json).")
+    new_run_parser.add_argument("--delivery-target", choices=DELIVERY_TARGETS, help="Requested final delivery target recorded in run.json.")
+    new_run_parser.add_argument("--target-slides", type=int, help="Approximate target slide/page count recorded in run.json.")
 
     review_parser = subparsers.add_parser("review", help="Run rule-based quality checks on a run folder and write dist/review.md")
     review_parser.add_argument("--run", type=Path, required=True, help="Path to the run directory to review.")
@@ -898,6 +1122,31 @@ def main() -> int:
         type=Path,
         help="Output PPTX path. Relative paths are resolved inside the run directory; default: dist/<run-name>.pptx.",
     )
+
+    pdf_parser = subparsers.add_parser(
+        "package-pdf",
+        help="Package assets/generated-slides/*.png into an image-only PDF, one slide image per page",
+    )
+    pdf_parser.add_argument("--run", type=Path, required=True, help="Path to the run directory to package.")
+    pdf_parser.add_argument(
+        "--out",
+        type=Path,
+        help="Output PDF path. Relative paths are resolved inside the run directory; default: dist/<run-name>.pdf.",
+    )
+
+    preview_parser = subparsers.add_parser(
+        "package-preview",
+        help="Create the standard medium-size vertical preview PNG from assets/generated-slides/*.png",
+    )
+    preview_parser.add_argument("--run", type=Path, required=True, help="Path to the run directory to package.")
+    preview_parser.add_argument(
+        "--out",
+        type=Path,
+        help="Output PNG path. Relative paths are resolved inside the run directory; default: dist/preview.png.",
+    )
+    preview_parser.add_argument("--width", type=int, default=900, help="Maximum preview width in pixels.")
+    preview_parser.add_argument("--gap", type=int, default=24, help="Vertical gap in pixels between slides.")
+    preview_parser.add_argument("--background", default="white", help="Canvas background color for gaps and side padding.")
 
     audit_parser = subparsers.add_parser(
         "audit-pptx",
@@ -918,11 +1167,24 @@ def main() -> int:
     if args.command == "inspect-marketplace":
         return inspect_marketplace(args.marketplace)
     if args.command == "new-run":
-        return new_run(args.source, args.name, args.runs_dir, args.force, args.mode, args.budget)
+        return new_run(
+            args.source,
+            args.name,
+            args.runs_dir,
+            args.force,
+            args.mode,
+            args.budget,
+            args.delivery_target,
+            args.target_slides,
+        )
     if args.command == "review":
         return review(args.run)
     if args.command == "package-images":
         return _package_images(args.run, args.out)
+    if args.command == "package-pdf":
+        return _package_pdf(args.run, args.out)
+    if args.command == "package-preview":
+        return _package_preview_command(args.run, args.out, args.width, args.gap, args.background)
     if args.command == "audit-pptx":
         return audit_pptx(args.pptx)
     if args.command == "ingest":

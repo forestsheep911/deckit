@@ -30,6 +30,7 @@ Reuse the slide IDs from `work/storyboard.md` verbatim as filenames (`prompts/<s
 - If the user asks for a `.pptx` after image generation, treat it as a packaging step around already generated images; do not write native PowerPoint layout specs or local rendering code.
 - Do not call third-party deck/PPTX generation skills such as Codex `Presentations` or Anthropic `pptx` from this skill. Write `$imagegen`-ready prompts only; native deck assembly is outside the active route.
 - Prefer prompts that explicitly say "Use case: productivity-visual" and "Asset type: 16:9 presentation slide image" so `$imagegen` receives an image task, not a PowerPoint assembly task.
+- The final delivery target is only `pptx` or `pdf`; do not write special prompts for alternate image-only delivery modes. Keep each generated slide independently readable because Deckit will also produce a standard vertical `dist/preview.png` from the generated slide PNGs.
 
 ## Reference Sample
 

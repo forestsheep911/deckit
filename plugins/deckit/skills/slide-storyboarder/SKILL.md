@@ -35,6 +35,9 @@ Examples: `00_cover`, `03_production_team`, `07_closing`.
 ## Guidance
 
 - Give each slide one job.
+- Respect any accepted preflight rough outline from `work/deck-brief.md` "Skill Notes" unless a concrete source conflict requires changing it.
+- Respect `requested_output.target_slide_count` in `run.json` when present. Treat it as approximate unless the target is 1; if you miss it by more than one slide, record the reason in the storyboard's Deck Meta or in the brief's Skill Notes.
+- The final delivery target is only a packaging choice (`pptx` or `pdf`); do not change the storyboard into a special alternate image-only format. Generated slide PNGs and `dist/preview.png` are standard artifacts derived from the storyboard.
 - Write titles that can be spoken aloud by a presenter, and keep titles under 80 characters (the `deckit-dev review` tool warns above this).
 - Avoid repetitive slide structures unless the repetition has a purpose.
 - Keep support points short enough to become slide text.
