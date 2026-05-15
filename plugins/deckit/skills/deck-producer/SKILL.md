@@ -13,7 +13,7 @@ Deckit v0.3 has one active production route: **image-first with actual image gen
 
 When the user explicitly invokes Deckit (`@deckit`, "use Deckit", "用 Deckit", or selecting the Deckit plugin), assume they want Deckit to produce a complete presentation deliverable, not a plain prose answer.
 
-Do not respond with "you have not asked for slides yet" when Deckit was explicitly invoked. If the user gives only a topic, use the preflight gate when needed; once the user answers or accepts defaults, turn that topic into a deck seed and start the image-first workflow.
+Do not respond with "you have not asked for slides yet" when Deckit was explicitly invoked. If the user did not explicitly say "use defaults", "no questions", or "just proceed", start with the recommendation gate below; once the user accepts, requests more options, or supplies custom constraints, turn the request into a deck seed and start the image-first workflow.
 
 Treat these as deck-production intents when Deckit is invoked:
 
@@ -31,7 +31,7 @@ Treat these as deck-production intents when Deckit is invoked:
 
 Examples:
 
-- `@deckit 介绍一下 F-16 战斗机` → if high-risk vague, ask the compact preflight questions first; then produce an F-16 image-first deck end to end: brief, storyboard, prompts, generated slide PNGs, review, and the chosen delivery package.
+- `@deckit 介绍一下 F-16 战斗机` → show a recommended Deckit plan first; after the user accepts or adjusts it, produce an F-16 image-first deck end to end: brief, storyboard, prompts, generated slide PNGs, review, and the chosen delivery package.
 - `@deckit summarize this article` → produce an article-summary deck end to end unless the user explicitly asks only for a summary.
 - `@deckit 讲讲普卡拉战斗机` → produce a topic-source deck run end to end.
 
@@ -44,27 +44,48 @@ Minimum default output for an explicit Deckit invocation is a complete Deckit de
 5. the chosen packaged final delivery target when packaging is available; default is `dist/<deck-name>.pptx` as a non-editable image container
 6. `dist/review.md` and, for PPTX, an audit result
 
-Do not stop at prose, a brief, a storyboard, or a prompt pack merely to ask whether to continue. Continue through `$imagegen` and packaging by default. Stop early only when the user explicitly requests a partial artifact, explicitly forbids slides/images/PPTX, or a required tool is unavailable.
+After the recommendation gate has been accepted or bypassed by explicit user instruction, do not stop at prose, a brief, a storyboard, or a prompt pack merely to ask whether to continue. Continue through `$imagegen` and packaging by default. Stop early only when the user explicitly requests a partial artifact, explicitly forbids slides/images/PPTX, or a required tool is unavailable.
 
 Exceptions: answer directly instead of starting a deck run when the user asks what Deckit can do, asks to install/debug/inspect/review Deckit, explicitly requests text-only output, or explicitly says not to create slides/deck artifacts.
 
-## Preflight Clarification Gate
+## Recommendation Gate
 
-Deckit should protect users from wasting time, tokens, and image-generation budget on a vague request whose output is likely to miss their intent. Before creating run artifacts or invoking `$imagegen`, run a quick ambiguity check.
+Before creating run artifacts or invoking `$imagegen`, Deckit should normally pause once and show a recommended production plan. This protects users from hidden defaults while avoiding an up-front form. The recommendation gate is mandatory for explicit Deckit production requests unless the user already gave a complete production specification or explicitly said to use defaults / no questions / just proceed.
 
-Ask a **single compact preflight question set** when the request is high-risk vague, for example:
+The recommendation gate must be lightweight:
 
-- only a topic or generic command is provided, such as `@deckit 介绍一下 F-16`, `@deckit 做个 AI 介绍`, or `@deckit summarize this`, with no audience, goal, depth, page count, or final delivery target;
-- the requested topic can reasonably support several incompatible framings (executive briefing, classroom explainer, investor pitch, technical deep dive, product marketing, policy memo, etc.);
-- the user asks for "高质量", "随便做", "帮我做好看点", or similar wording without a budget/quality level or page count;
-- the final format is ambiguous and the format affects the workflow or cost;
-- source material is thin, broad, contradictory, or likely to require fact-checking before a useful deck can be produced.
+- Do enough thinking to propose a good plan, but do not create run artifacts, write files, call `$imagegen`, or package outputs before the user responds.
+- Show the recommended quality, slide count, final delivery target, and rough 3-6 section outline. Include aspect ratio only when it is likely to matter.
+- Then stop and ask for exactly one of these choices:
+  - `A` = accept the recommendation and start production.
+  - `B` = show more options across the key dimensions.
+  - `C` = let the user add custom requirements.
+- If the user replies `A`, `默认`, `default`, or an equivalent acceptance, proceed using the recommended plan and record it in `work/deck-brief.md` "Skill Notes".
+- If the user replies `B`, run the expanded preflight options flow below.
+- If the user replies `C`, ask for or accept the user's custom requirements, then proceed after the custom constraints are clear enough. If the custom input is still ambiguous, ask only for the missing fields.
 
-Do **not** ask preflight questions when the user already supplies enough constraints to choose defaults safely, or when they explicitly say to use defaults / no questions / just proceed. In those cases, proceed with sensible defaults and record the assumptions.
+Use this default style:
 
-Do **not** make the user restate information they already provided. The preflight gate is a missing-information check, not an information-migration or confirmation ceremony. If the prompt already includes quality level, approximate page count, audience/goal, rough structure, and output format, skip the Q&A entirely and start production. If only one or two fields are missing, ask only for those missing fields or infer them from defaults when safe; do not show the full four-question template.
+```text
+我建议这样做：
+- 质量：balanced
+- 页数：8 页
+- 输出：PPTX（图片式非编辑容器），并自动生成 preview
+- 粗大纲：A → B → C → D
 
-The preflight should ask at most four concise items, in this order:
+请选择：
+A 接受推荐方案，直接制作
+B 展开更多选项让我挑
+C 我补充自定义需求
+```
+
+If the user prompt already includes enough constraints to choose defaults safely, still show a concise recommendation and pause once unless the user explicitly said to skip questions. Do not ask the user to restate information already provided; map their words into the plan. Example: "高质量" maps to `premium`, "6 页" maps to 6 slides, "输出 PDF" maps to `pdf`.
+
+## Expanded Preflight Options
+
+Use the expanded preflight options flow when the user chooses `B` from the recommendation gate, or when their custom `C` response asks to choose from options. This flow is a selectable options panel, not the default first response.
+
+The expanded preflight should ask at most four concise items, in this order:
 
 1. **Quality / budget level**: `quick`, `balanced`, or `premium`. Default is `balanced`.
 2. **Approximate page/slide count**: offer a few concrete choices instead of asking a yes/no question. Put the recommended choice first, based on budget and topic complexity; also allow a free-form custom count/range. For example:
@@ -78,21 +99,56 @@ The preflight should ask at most four concise items, in this order:
    - `pptx` — default; non-editable image-container PPTX after generated slide PNGs exist.
    - `pdf` — image-only PDF, one generated slide image per page.
 
+When image aspect ratio is likely to matter, include it in the same compact preflight block rather than adding a separate question. Default to landscape `169` for ordinary computer/projector decks, but offer common alternatives and a custom-ratio code. Custom ratios must stay within `$imagegen` / `gpt-image-2` constraints: the long-to-short ratio must be `<= 3:1`, and the eventual pixel size must use edges that are multiples of `16px`, max edge `<= 3840px`, with total pixels between `655,360` and `8,294,400`. If the user's requested custom ratio is outside `1:3` through `3:1`, ask them to choose another ratio before image generation.
+
 Generated slide PNGs are always kept under `assets/generated-slides/` as intermediate artifacts, so they are not a final delivery choice. A medium-size vertical preview image is also a standard artifact and should be produced automatically; do not ask the user to choose it as a delivery target.
 
-Use a short answer format such as the following only when most key fields are missing:
+Use a compact override-code format. Put the default plan first, then tell the user they can reply with `默认` / `default` to start, or reply only with the short codes they want to override. The user must not have to repeat item numbers such as `1 quick 2 8页`.
+
+Short-code rules:
+
+- Use one globally unique code per option within the preflight block; do not rely on question numbers for disambiguation.
+- Prefer letters and digits only. Avoid punctuation and symbols in user-entered codes.
+- Codes are case-insensitive. Display codes in uppercase, but parse `q`, `Q`, `pdf`, and `PDF` equivalently by trimming whitespace and uppercasing before matching.
+- Use semantic codes where possible: `Q` = quick, `B` = balanced, `P` = premium, `PPTX` = pptx, `PDF` = pdf, `O` = revise outline.
+- Use plain numbers for page counts when unambiguous: `5`, `8`, `12`.
+- Use plain digits for aspect ratios if aspect ratio is offered: `169` = 16:9, `916` = 9:16, `43` = 4:3, `11` = 1:1.
+- For a free custom ratio, use `R<width>BY<height>` with letters and digits only, such as `R21BY9` or `R4BY5`. Parse it case-insensitively and validate that the ratio is within `1:3` through `3:1` before proceeding.
+- If codes conflict, lengthen the code instead of using punctuation or case distinctions. For example, keep `P` for premium and use `PPTX` for PowerPoint.
+- If a preflight ever needs many options, continue with Excel-style alphanumeric codes such as `A`...`Z`, `AA`, `AB`, while still keeping each code unique in that block.
+
+Use a short answer format such as the following:
 
 ```text
-为了避免跑偏，我先确认 4 件事；你也可以直接回复“用默认方案”。
-1. 质量：quick / balanced（默认）/ premium？
-2. 页数：标准 8 页（推荐）/ 精简 5 页 / 完整 12 页 / 自定义？
-3. 粗大纲：A → B → C → D，是否接受或要改？
-4. 最终输出：pptx（默认）/ pdf？
+为了避免跑偏，我先确认几个默认值。
+默认：B / 8页 / PPTX / 接受粗大纲
+粗大纲：A → B → C → D
+
+回复“默认”直接开始；或只回复要改的短码，可多个组合：
+Q = quick
+P = premium
+5 = 5页
+12 = 12页
+PDF = 输出 PDF
+O = 修改粗大纲
+
+例：q 12 pdf
+=> quick，12页，输出 PDF，其余默认
 ```
 
-If the user answers partially, infer the rest from defaults and continue. If the user accepts the outline, treat that outline as a constraint for `story-architect` and `slide-storyboarder`.
+If aspect ratio is relevant, include it in the default line and code list using the same punctuation-free convention:
 
-If the user prompt is already complete, convert the provided constraints directly into production settings. For example:
+```text
+默认：B / 8页 / 169 / PPTX / 接受粗大纲
+916 = 竖屏 9:16
+43 = 4:3
+11 = 1:1
+R21BY9 = 自定义 21:9；可改成 R宽BY高，比例必须在 1:3 到 3:1 内
+```
+
+If the user answers partially, infer the rest from defaults and continue. Treat short-code answers as overrides on top of the default plan; for example `q 916 pdf` means quick, vertical 9:16, PDF, and all other defaults. If the user accepts the outline, treat that outline as a constraint for `story-architect` and `slide-storyboarder`.
+
+If the user prompt is complete and the recommendation gate was bypassed by explicit user instruction, convert the provided constraints directly into production settings. For example:
 
 - explicit quality language such as "快速草稿", "标准质量", or "高质量" maps to `quick`, `balanced`, or `premium`;
 - explicit page count such as "做 6 页" or "10-12 页" maps to `requested_output.target_slide_count`;
@@ -100,9 +156,9 @@ If the user prompt is already complete, convert the provided constraints directl
 - explicit delivery format such as "给我 PDF" or "做成 PPTX" maps to the final delivery target.
 - if the user asks for PNGs or a preview/long image, keep the generated slide PNGs and standard vertical preview as artifacts, but do not treat PNGs or stitched images as final delivery targets unless the user explicitly asks for a partial image-only run.
 
-The preflight gate is **not** a continuation gate. It is allowed only before expensive production starts. Once the user has answered or accepted defaults, do not insert additional approval checkpoints between brief, storyboard, prompts, image generation, and packaging.
+The recommendation gate and expanded preflight are **not** continuation gates. They are allowed only before expensive production starts. Once the user has accepted the recommendation, chosen options, supplied custom requirements, or explicitly skipped questions, do not insert additional approval checkpoints between brief, storyboard, prompts, image generation, and packaging.
 
-Record preflight decisions when possible:
+Record recommendation/preflight decisions when possible:
 
 - `run.json`: `budget_mode`, `requested_output.delivery_target`, and `requested_output.target_slide_count`.
 - `work/deck-brief.md`: "Skill Notes" with quality level, target page count, accepted outline, final delivery target, assumptions, standard preview expectation, and unanswered items filled by defaults.
@@ -119,7 +175,7 @@ Forbidden during an explicit Deckit run:
 - Asking the user to confirm image generation when `$imagegen` is available and the run is not explicitly text-only.
 - Asking whether to package as PPTX after all slide PNGs exist and packaging tools are available.
 
-The only exception is the **Preflight Clarification Gate**, which may ask once before artifact production begins when the request is high-risk vague.
+The only exception is the **Recommendation Gate**, which normally asks once before artifact production begins unless the user explicitly skipped questions or already gave a complete production specification.
 
 Instead, announce the route briefly in commentary, then continue. Budget mode may change slide count and critique depth, but it must not silently downgrade an explicit Deckit invocation into "outline only" or "prompt pack only".
 
@@ -200,6 +256,8 @@ Final delivery targets remain image-first. They package generated full-slide PNG
   deckit-dev package-pdf --run <run-folder>
   ```
 
+  This packages the slide PNGs as lossless full-page PDF image objects. It should preserve slide-image fidelity by default, even when the resulting PDF is large.
+
 Generated slide PNGs are always retained under `assets/generated-slides/` as intermediate artifacts, in storyboard order. They are useful for inspection and reuse, but they are not a final delivery target in the preflight choice.
 
 A medium-size vertical preview image is a standard artifact and should be produced automatically after generated slide PNGs exist. It is not a user-selected final delivery target. Generate it with:
@@ -219,7 +277,7 @@ If the user requests multiple final delivery targets, produce the primary reques
 
 ## Workflow
 
-1. Identify the user's source material and desired output. Run the **Preflight Clarification Gate** once if the prompt is high-risk vague. If Deckit was explicitly invoked and the source is only a topic or instruction, treat it as a source seed for a complete deck after preflight/defaults. If the source is a `.pdf` or an `http(s)` URL, route through `document-ingestor` first to produce `source/input.md`.
+1. Identify the user's source material and desired output. Run the **Recommendation Gate** once unless the user explicitly skipped questions or already gave a complete production specification. If Deckit was explicitly invoked and the source is only a topic or instruction, treat it as a source seed for a complete deck after recommendation/defaults. If the source is a `.pdf` or an `http(s)` URL, route through `document-ingestor` first to produce `source/input.md`.
 2. Record `production_mode: image-first`. Do not ask the user to choose among production modes.
 3. Choose a **budget mode**: `quick`, `balanced`, or `premium`. The default when the user is silent is `balanced`.
 4. Record the requested final delivery target and target slide/page count when known.

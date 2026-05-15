@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import zipfile
+import zlib
 from pathlib import Path
 
 import yaml
@@ -899,31 +900,113 @@ def _resolve_dist_output(run_dir: Path, out_path: Path | None, suffix: str) -> P
     return out_path
 
 
+def _pdf_stream(payload: bytes, dictionary: bytes = b"") -> bytes:
+    if dictionary:
+        dictionary = dictionary.rstrip() + b"\n"
+    header = b"<<\n" + dictionary + f"/Length {len(payload)}\n".encode("ascii") + b">>"
+    return header + b"\nstream\n" + payload + b"\nendstream"
+
+
+def _write_lossless_image_pdf(image_paths: list[Path], out_path: Path) -> None:
+    """Write one full-page image per PDF page without JPEG recompression."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for PDF packaging.") from exc
+
+    objects: list[bytes] = []
+
+    def add_obj(payload: bytes) -> int:
+        objects.append(payload)
+        return len(objects)
+
+    catalog_id = add_obj(b"")
+    pages_id = add_obj(b"")
+    page_ids: list[int] = []
+
+    for index, image_path in enumerate(image_paths, start=1):
+        with Image.open(image_path) as image:
+            width, height = image.size
+            has_alpha = image.mode in {"RGBA", "LA"} or "transparency" in image.info
+            if has_alpha:
+                rgba = image.convert("RGBA")
+                rgb_payload = zlib.compress(rgba.convert("RGB").tobytes(), level=6)
+                alpha_payload = zlib.compress(rgba.getchannel("A").tobytes(), level=6)
+                alpha_id = add_obj(
+                    _pdf_stream(
+                        alpha_payload,
+                        (
+                            f"/Type /XObject\n/Subtype /Image\n/Width {width}\n/Height {height}\n"
+                            "/ColorSpace /DeviceGray\n/BitsPerComponent 8\n/Filter /FlateDecode\n"
+                        ).encode("ascii"),
+                    )
+                )
+            else:
+                rgb_payload = zlib.compress(image.convert("RGB").tobytes(), level=6)
+                alpha_id = None
+
+        smask = f"/SMask {alpha_id} 0 R\n" if alpha_id is not None else ""
+        image_id = add_obj(
+            _pdf_stream(
+                rgb_payload,
+                (
+                    f"/Type /XObject\n/Subtype /Image\n/Width {width}\n/Height {height}\n"
+                    f"/ColorSpace /DeviceRGB\n/BitsPerComponent 8\n/Filter /FlateDecode\n{smask}"
+                ).encode("ascii"),
+            )
+        )
+
+        image_name = f"Im{index}"
+        content = f"q\n{width} 0 0 {height} 0 0 cm\n/{image_name} Do\nQ\n".encode("ascii")
+        content_id = add_obj(_pdf_stream(content))
+        page_id = add_obj(
+            (
+                f"<<\n/Type /Page\n/Parent {pages_id} 0 R\n/MediaBox [0 0 {width} {height}]\n"
+                f"/Resources << /XObject << /{image_name} {image_id} 0 R >> >>\n"
+                f"/Contents {content_id} 0 R\n>>"
+            ).encode("ascii")
+        )
+        page_ids.append(page_id)
+
+    objects[catalog_id - 1] = f"<<\n/Type /Catalog\n/Pages {pages_id} 0 R\n>>".encode("ascii")
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    objects[pages_id - 1] = f"<<\n/Type /Pages\n/Count {len(page_ids)}\n/Kids [{kids}]\n>>".encode("ascii")
+
+    output = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for obj_id, payload in enumerate(objects, start=1):
+        offsets.append(len(output))
+        output.extend(f"{obj_id} 0 obj\n".encode("ascii"))
+        output.extend(payload)
+        output.extend(b"\nendobj\n")
+
+    xref_offset = len(output)
+    output.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    output.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        output.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    output.extend(
+        (
+            f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF\n"
+        ).encode("ascii")
+    )
+    out_path.write_bytes(output)
+
+
 def _package_pdf(run_dir: Path, out_path: Path | None) -> int:
     """Package generated slide PNGs into an image-only PDF, one slide image per page."""
     run_dir = run_dir.resolve()
     slide_ids, image_paths = _require_generated_slide_images(run_dir)
     out_path = _resolve_dist_output(run_dir, out_path, ".pdf")
 
-    try:
-        from PIL import Image, JpegImagePlugin  # noqa: F401
-    except ImportError as exc:
-        raise RuntimeError("Pillow is required for PDF packaging.") from exc
-
-    rgb_pages = []
-    for image_path in image_paths:
-        with Image.open(image_path) as image:
-            page = image.convert("RGB")
-            rgb_pages.append(page.copy())
-
-    first, rest = rgb_pages[0], rgb_pages[1:]
-    first.save(out_path, save_all=True, append_images=rest)
+    _write_lossless_image_pdf(image_paths, out_path)
 
     preview_path = _package_preview(run_dir, None)
 
     print(f"wrote: {out_path}")
     print(f"pages packaged: {len(slide_ids)}")
-    print("mode: image-first PNG pages packaged as an image-only PDF")
+    print("mode: image-first PNG PDF; lossless Flate image embedding; no JPEG recompression")
     print(f"preview: {preview_path}")
     return 0
 
