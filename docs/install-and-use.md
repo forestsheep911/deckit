@@ -109,7 +109,8 @@ uv run deckit-dev new-run `
   --source "<workdir>\sources\<topic>.md" `
   --name <topic> `
   --runs-dir "<workdir>" `
-  --budget balanced
+  --budget balanced `
+  --style HAND
 ```
 
 For a PDF source (the `document-ingestor` skill is invoked automatically to convert the PDF into `source/input.md`):
@@ -126,7 +127,14 @@ uv run deckit-dev new-run --source "https://example.com/<post>" --name <topic> -
 
 `--runs-dir` lets the run folder land in `<workdir>` instead of the default `<deckit-repo>\local-runs\`.
 
-`production_mode` and `budget_mode` are recorded in `run.json`. In v0.4, `production_mode` is always `image-first`; `--mode` is optional and accepts only `image-first`.
+`production_mode`, `budget_mode`, and `visual_style_id` are recorded in `run.json`. In v0.4, `production_mode` is always `image-first`; `--mode` is optional and accepts only `image-first`. `--style` accepts either a stable style ID or its short code. Omit it to use `adaptive-default`.
+
+List the available styles:
+
+```powershell
+cd <deckit-repo>\tools
+uv run deckit-dev list-styles
+```
 
 You can also call the ingestor on its own (useful when you want to review the extracted Markdown before creating the run):
 
@@ -141,7 +149,7 @@ Inspect the result:
 type "<workdir>\<topic>\run.json"
 ```
 
-You should see `production_mode`, `budget_mode`, and a `source.type` of `text`, `pdf`, or `url`.
+You should see `production_mode`, `budget_mode`, `visual_style_id`, and a `source.type` of `text`, `pdf`, or `url`.
 
 ## Step 5 — Produce the Deck
 

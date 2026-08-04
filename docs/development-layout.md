@@ -48,6 +48,22 @@ Inclusion rules (must hold for every sample deck added here):
 
 Skills that reference samples (currently `story-architect` and `visual-director`) link to `../../assets/sample-decks/<deck-name>/` from inside their `SKILL.md`. New samples should be linked from at least one skill, otherwise they will not be discoverable.
 
+## Visual Style Library
+
+Reusable style presets live under `plugins/deckit/assets/visual-styles/`:
+
+- `catalog.json` contains stable style IDs, unique preflight short codes, descriptions, and spec filenames.
+- One Markdown file per style contains its visual and prompt contract.
+- Generated images and one-off run prompts do not belong in the library.
+
+Add styles through the catalog rather than hard-coding option lists into skills. Validate the library with:
+
+```powershell
+cd tools
+uv run deckit-dev list-styles
+uv run python -m unittest discover -s tests
+```
+
 ## Local Marketplace
 
 `.agents/plugins/marketplace.json` is the repo-local plugin marketplace used for install-flow testing.

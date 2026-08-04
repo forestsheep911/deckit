@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "default_style_id": "adaptive-default",
+  "styles": [
+    {
+      "id": "adaptive-default",
+      "code": "AUTO",
+      "name": "自适应默认",
+      "description": "根据主题、受众和叙事结构推导视觉语言，不预设固定媒介或配色。",
+      "spec": "adaptive-default.md",
+      "recommended_for": [
+        "用户没有明确风格偏好",
+        "商业、产品、研究等通用演示",
+        "需要由内容决定图表、摄影或插画比例"
+      ]
+    },
+    {
+      "id": "notability-handwritten-cn",
+      "code": "HAND",
+      "name": "米白手写学术讲义",
+      "description": "温暖米白数字笔记页、深藏青真实手写、克制高亮与纤细推导图，适合中文技术和学术报告。",
+      "spec": "notability-handwritten-cn.md",
+      "recommended_for": [
+        "中文数学、技术或研究成果讲解",
+        "单页单问题的推导型叙事",
+        "希望呈现个人讲义感而非商业模板感"
+      ]
+    }
+  ]
+}

@@ -55,7 +55,7 @@ Before creating run artifacts or invoking `$imagegen`, Deckit should normally pa
 The recommendation gate must be lightweight:
 
 - Do enough thinking to propose a good plan, but do not create run artifacts, write files, call `$imagegen`, or package outputs before the user responds.
-- Show the recommended quality, slide count, final delivery target, and rough 3-6 section outline. Include aspect ratio only when it is likely to matter.
+- Show the recommended quality, slide count, visual style, final delivery target, and rough 3-6 section outline. Include aspect ratio only when it is likely to matter.
 - Then stop and ask for exactly one of these choices:
   - `A` = accept the recommendation and start production.
   - `B` = show more options across the key dimensions.
@@ -70,6 +70,7 @@ Use this default style:
 我建议这样做：
 - 质量：balanced
 - 页数：8 页
+- 风格：自适应默认（`adaptive-default`）
 - 输出：PPTX（图片式非编辑容器），并自动生成 preview
 - 粗大纲：A → B → C → D
 
@@ -99,6 +100,8 @@ The expanded preflight should ask at most four concise items, in this order:
    - `pptx` — default; non-editable image-container PPTX after generated slide PNGs exist.
    - `pdf` — image-only PDF, one generated slide image per page.
 
+Visual style is a compact override in the same preflight block, not a fifth question. Read `../../assets/visual-styles/catalog.json`, recommend the best matching library style, and display only the most relevant style codes plus `AUTO`. If the user wants the complete library, show every catalog entry. Follow `../../references/visual-style-library.md` for selection, custom styles, and recording rules.
+
 When image aspect ratio is likely to matter, include it in the same compact preflight block rather than adding a separate question. Default to landscape `169` for ordinary computer/projector decks, but offer common alternatives and a custom-ratio code. Custom ratios must stay within `$imagegen` / `gpt-image-2` constraints: the long-to-short ratio must be `<= 3:1`, and the eventual pixel size must use edges that are multiples of `16px`, max edge `<= 3840px`, with total pixels between `655,360` and `8,294,400`. If the user's requested custom ratio is outside `1:3` through `3:1`, ask them to choose another ratio before image generation.
 
 Generated slide PNGs are always kept under `assets/generated-slides/` as intermediate artifacts, so they are not a final delivery choice. A medium-size vertical preview image is also a standard artifact and should be produced automatically; do not ask the user to choose it as a delivery target.
@@ -121,7 +124,7 @@ Use a short answer format such as the following:
 
 ```text
 为了避免跑偏，我先确认几个默认值。
-默认：B / 8页 / PPTX / 接受粗大纲
+默认：B / 8页 / AUTO / PPTX / 接受粗大纲
 粗大纲：A → B → C → D
 
 回复“默认”直接开始；或只回复要改的短码，可多个组合：
@@ -130,6 +133,8 @@ P = premium
 5 = 5页
 12 = 12页
 PDF = 输出 PDF
+AUTO = 自适应默认
+HAND = 米白手写学术讲义
 O = 修改粗大纲
 
 例：q 12 pdf
@@ -139,7 +144,7 @@ O = 修改粗大纲
 If aspect ratio is relevant, include it in the default line and code list using the same punctuation-free convention:
 
 ```text
-默认：B / 8页 / 169 / PPTX / 接受粗大纲
+默认：B / 8页 / AUTO / 169 / PPTX / 接受粗大纲
 916 = 竖屏 9:16
 43 = 4:3
 11 = 1:1
@@ -161,7 +166,8 @@ The recommendation gate and expanded preflight are **not** continuation gates. T
 Record recommendation/preflight decisions when possible:
 
 - `run.json`: `budget_mode`, `requested_output.delivery_target`, and `requested_output.target_slide_count`.
-- `work/deck-brief.md`: "Skill Notes" with quality level, target page count, accepted outline, final delivery target, assumptions, standard preview expectation, and unanswered items filled by defaults.
+- `run.json`: also record the resolved library style ID as `visual_style_id`; use `custom` only when the user supplied a run-specific visual prompt.
+- `work/deck-brief.md`: "Skill Notes" with quality level, target page count, accepted outline, resolved visual style, final delivery target, assumptions, standard preview expectation, and unanswered items filled by defaults.
 - `work/storyboard.md`: Deck Meta or notes explaining any deviation from the requested page count or outline.
 
 ## No Continuation Gate
@@ -264,12 +270,13 @@ If the user requests multiple final delivery targets, produce the primary reques
 1. Identify the user's source material and desired output. Run the **Recommendation Gate** once unless the user explicitly skipped questions or already gave a complete production specification. If Deckit was explicitly invoked and the source is only a topic or instruction, treat it as a source seed for a complete deck after recommendation/defaults. If the source is a `.pdf` or an `http(s)` URL, route through `document-ingestor` first to produce `source/input.md`.
 2. Record `production_mode: image-first`. Do not ask the user to choose among production modes.
 3. Choose a **budget mode**: `quick`, `balanced`, or `premium`. The default when the user is silent is `balanced`.
-4. Record the requested final delivery target and target slide/page count when known.
-5. Select the minimum specialist workflow needed.
-6. Keep intermediate artifacts in predictable paths.
-7. Invoke the official `$imagegen` skill to generate full-slide images from the prompt pack unless the user explicitly asked for a partial/text-only artifact or `$imagegen` is truly unavailable. In built-in mode, copy or move generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`.
-8. Package generated slide images according to the final delivery target, and ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. A missing repository development helper is not a packaging blocker; use a local image-container path that preserves the same invariants.
-9. Apply quality gates before calling the work done.
+4. Resolve a visual style from `assets/visual-styles/catalog.json`, or preserve a user-supplied custom style; record it as `visual_style_id`.
+5. Record the requested final delivery target and target slide/page count when known.
+6. Select the minimum specialist workflow needed.
+7. Keep intermediate artifacts in predictable paths.
+8. Invoke the official `$imagegen` skill to generate full-slide images from the prompt pack unless the user explicitly asked for a partial/text-only artifact or `$imagegen` is truly unavailable. In built-in mode, copy or move generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`.
+9. Package generated slide images according to the final delivery target, and ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. A missing repository development helper is not a packaging blocker; use a local image-container path that preserves the same invariants.
+10. Apply quality gates before calling the work done.
 
 Use `../../references/workflow.md` for the production flow and `../../references/budget-modes.md` for budget decisions.
 

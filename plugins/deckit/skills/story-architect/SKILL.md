@@ -19,7 +19,7 @@ Write a deck brief, usually at `work/deck-brief.md`, with:
 - Section outline.
 - Material to exclude or compress.
 - Risks, assumptions, or fact-check needs.
-- Skill Notes (optional last section): record decisions that affect downstream specialists, including the chosen production mode, budget/quality mode, final delivery target (`pptx` or `pdf`), target slide/page count, accepted preflight rough outline, standard preview expectation, deviations from defaults, and any limitations of the source.
+- Skill Notes (optional last section): record decisions that affect downstream specialists, including the chosen production mode, budget/quality mode, resolved `visual_style_id`, final delivery target (`pptx` or `pdf`), target slide/page count, accepted preflight rough outline, standard preview expectation, deviations from defaults, and any limitations of the source.
 
 Do not write slide titles or visual descriptions in the brief; those are the jobs of `slide-storyboarder` and `visual-director`.
 

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import yaml
 
+from deckit_dev.visual_styles import load_visual_style_catalog, resolve_visual_style
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_PLUGIN = REPO_ROOT / "plugins" / "deckit"
@@ -53,6 +55,19 @@ def inspect_plugin(plugin: Path) -> int:
             raise ValueError(f"{skill_md} must include name and description")
         print(f"- {name}: {skill_md.parent.relative_to(plugin)}")
 
+    catalog = load_visual_style_catalog(plugin)
+    print(f"visual styles: {len(catalog['styles'])}")
+    print(f"default visual style: {catalog['default_style_id']}")
+
+    return 0
+
+
+def list_visual_styles(plugin: Path) -> int:
+    catalog = load_visual_style_catalog(plugin)
+    print(f"default: {catalog['default_style_id']}")
+    for style in catalog["styles"]:
+        print(f"- {style['code']}  {style['id']}  {style['name']}")
+        print(f"  {style['description']}")
     return 0
 
 
@@ -137,9 +152,13 @@ def new_run(
     budget: str | None,
     delivery_target: str | None,
     target_slides: int | None,
+    visual_style: str | None,
 ) -> int:
     mode = mode or "image-first"
     kind = _classify_source(source)
+    style_catalog = load_visual_style_catalog(DEFAULT_PLUGIN)
+    requested_visual_style = visual_style or style_catalog["default_style_id"]
+    resolved_visual_style = resolve_visual_style(DEFAULT_PLUGIN, requested_visual_style)["id"]
 
     if kind == "text":
         source_path = Path(source).resolve()
@@ -203,6 +222,7 @@ def new_run(
         },
         "production_mode": mode,
         "budget_mode": budget,
+        "visual_style_id": resolved_visual_style,
         "requested_output": {
             "delivery_target": delivery_target,
             "target_slide_count": target_slides,
@@ -226,6 +246,7 @@ def new_run(
         print("target_slide_count: not set")
     else:
         print(f"target_slide_count: {target_slides}")
+    print(f"visual_style_id: {resolved_visual_style}")
     print("next artifacts:")
     for artifact in artifacts.values():
         print(f"- {artifact}")
@@ -511,12 +532,28 @@ def _scan_slide_count(budget: str | None, slide_count: int) -> list[tuple[str, s
     ]
 
 
-def _scan_prompts(run_dir: Path, storyboard_ids: list[str]) -> list[tuple[str, str, str]]:
+def _scan_prompts(
+    run_dir: Path, storyboard_ids: list[str], visual_style_id: object = None
+) -> list[tuple[str, str, str]]:
     findings: list[tuple[str, str, str]] = []
     prompts_dir = run_dir / "prompts"
     if not prompts_dir.is_dir():
         findings.append(("error", "PROMPTS-001", "prompts/ directory missing"))
         return findings
+    prompt_readme = prompts_dir / "README.md"
+    if not prompt_readme.is_file():
+        findings.append(("error", "PROMPTS-README", "prompts/README.md missing"))
+    elif visual_style_id:
+        readme_text = prompt_readme.read_text(encoding="utf-8")
+        expected = f"visual_style_id: {visual_style_id}"
+        if expected not in readme_text:
+            findings.append(
+                (
+                    "warn",
+                    "PROMPTS-STYLE-ID",
+                    f"prompts/README.md should record `{expected}`",
+                )
+            )
     prompt_ids = sorted(p.stem for p in prompts_dir.glob("*.md") if p.name != "README.md")
     storyboard_set = set(storyboard_ids)
     for sid in storyboard_ids:
@@ -1179,6 +1216,13 @@ def review(run_dir: Path) -> int:
     elif mode not in PRODUCTION_MODES:
         findings.append(("error", "MODE-002", f"production_mode '{mode}' is not one of {PRODUCTION_MODES}"))
 
+    visual_style_id = manifest.get("visual_style_id") if isinstance(manifest, dict) else None
+    if visual_style_id is not None and visual_style_id != "custom":
+        try:
+            resolve_visual_style(DEFAULT_PLUGIN, str(visual_style_id))
+        except ValueError as exc:
+            findings.append(("error", "STYLE-001", str(exc)))
+
     findings.extend(_scan_brief(run_dir / "work" / "deck-brief.md"))
 
     slide_blocks, sb_findings = _parse_storyboard(run_dir / "work" / "storyboard.md")
@@ -1205,7 +1249,7 @@ def review(run_dir: Path) -> int:
         findings.extend(_scan_requested_slide_count(target_slides, len(storyboard_ids)))
     if storyboard_ids and isinstance(budget, str) and target_slides is None:
         findings.extend(_scan_slide_count(budget, len(storyboard_ids)))
-    findings.extend(_scan_prompts(run_dir, storyboard_ids))
+    findings.extend(_scan_prompts(run_dir, storyboard_ids, visual_style_id))
     if mode == "image-first":
         findings.extend(_scan_image_first_artifacts(run_dir, storyboard_ids))
 
@@ -1220,6 +1264,7 @@ def review(run_dir: Path) -> int:
     lines: list[str] = []
     lines.append(f"# Review Report — {run_dir.name}\n\n")
     lines.append(f"- Production mode: `{mode if mode else 'unset'}`\n")
+    lines.append(f"- Visual style: `{visual_style_id if visual_style_id else 'unset'}`\n")
     if isinstance(requested_output, dict):
         lines.append(f"- Final delivery target: `{requested_output.get('delivery_target') or 'unset'}`\n")
         lines.append(f"- Target slide count: `{requested_output.get('target_slide_count') or 'unset'}`\n")
@@ -1245,6 +1290,9 @@ def main() -> int:
     inspect_parser = subparsers.add_parser("inspect", help="Inspect the plugin manifest and skills")
     inspect_parser.add_argument("--plugin", type=Path, default=DEFAULT_PLUGIN)
 
+    styles_parser = subparsers.add_parser("list-styles", help="List and validate reusable visual style presets")
+    styles_parser.add_argument("--plugin", type=Path, default=DEFAULT_PLUGIN)
+
     marketplace_parser = subparsers.add_parser("inspect-marketplace", help="Inspect repo-local plugin marketplace")
     marketplace_parser.add_argument("--marketplace", type=Path, default=DEFAULT_MARKETPLACE)
 
@@ -1267,6 +1315,10 @@ def main() -> int:
     new_run_parser.add_argument("--budget", choices=("quick", "balanced", "premium"), help="Budget mode (recorded in run.json).")
     new_run_parser.add_argument("--delivery-target", choices=DELIVERY_TARGETS, help="Requested final delivery target recorded in run.json.")
     new_run_parser.add_argument("--target-slides", type=int, help="Approximate target slide/page count recorded in run.json.")
+    new_run_parser.add_argument(
+        "--style",
+        help="Visual style ID or short code from deckit-dev list-styles; recorded in run.json.",
+    )
 
     review_parser = subparsers.add_parser("review", help="Run rule-based quality checks on a run folder and write dist/review.md")
     review_parser.add_argument("--run", type=Path, required=True, help="Path to the run directory to review.")
@@ -1323,6 +1375,8 @@ def main() -> int:
 
     if args.command == "inspect":
         return inspect_plugin(args.plugin.resolve())
+    if args.command == "list-styles":
+        return list_visual_styles(args.plugin.resolve())
     if args.command == "inspect-marketplace":
         return inspect_marketplace(args.marketplace)
     if args.command == "new-run":
@@ -1335,6 +1389,7 @@ def main() -> int:
             args.budget,
             args.delivery_target,
             args.target_slides,
+            args.style,
         )
     if args.command == "review":
         return review(args.run)

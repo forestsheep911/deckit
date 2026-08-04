@@ -10,7 +10,7 @@ Before starting an expensive image-first run, Deckit normally pauses once with a
 
 Run this recommendation gate for explicit Deckit production requests unless the user already gave a complete production specification or explicitly said to use defaults / no questions / just proceed. The gate happens before run artifacts, file writes, `$imagegen`, or packaging.
 
-The first response should recommend a single plan and stop. Include quality, slide count, final delivery target, and a coarse 3-6 section outline. Include aspect ratio only when it is likely to matter. Then ask the user to choose exactly one path:
+The first response should recommend a single plan and stop. Include quality, slide count, visual style, final delivery target, and a coarse 3-6 section outline. Resolve styles through `visual-style-library.md` and `../assets/visual-styles/catalog.json`. Include aspect ratio only when it is likely to matter. Then ask the user to choose exactly one path:
 
 - `A` = accept the recommendation and start production.
 - `B` = show more options across the key dimensions.
@@ -22,6 +22,7 @@ Use this style:
 我建议这样做：
 - 质量：balanced
 - 页数：8 页
+- 风格：自适应默认（`adaptive-default`）
 - 输出：PPTX（图片式非编辑容器），并自动生成 preview
 - 粗大纲：时代背景 → 生平节点 → 代表实验 → 科学影响 → 后世纪念
 
@@ -43,6 +44,8 @@ Use expanded preflight only when the user chooses `B`, or when a `C` custom resp
 2. Approximate page/slide count, offered as concrete choices rather than a yes/no acceptance question.
 3. A coarse 3-6 section outline and whether the user accepts it.
 4. Final delivery target: `pptx` (default) or `pdf`.
+
+Visual style is an override inside the same compact preflight block, not a fifth question. Recommend the best matching catalog style and expose its globally unique short code plus `AUTO`; show the full library only when the user asks to browse styles.
 
 If the user says to use defaults, proceed without more questions. If they answer partially, infer the rest from defaults and record the assumptions. Recommendation/preflight is allowed only before artifact production. It must not become a continuation gate between brief, storyboard, prompts, image generation, and packaging.
 
@@ -69,7 +72,7 @@ Skip the recommendation/preflight entirely only when the user explicitly says to
 - if only a few fields are missing, ask only those fields or safely fill defaults;
 - only use the full options template when the user chose `B` or explicitly asked for choices.
 
-Key fields include quality/budget, approximate page count, audience or goal, rough structure, and final delivery target. Map explicit user wording into settings instead of asking again: "高质量" → `premium`, "6 页" → `target_slide_count: 6`, "按背景/挑战/方案/案例/结论" → accepted rough outline, and "输出 PDF" → `pdf`.
+Key fields include quality/budget, approximate page count, audience or goal, rough structure, visual style, and final delivery target. Map explicit user wording into settings instead of asking again: "高质量" → `premium`, "6 页" → `target_slide_count: 6`, "手写讲义风" → `notability-handwritten-cn`, "按背景/挑战/方案/案例/结论" → accepted rough outline, and "输出 PDF" → `pdf`.
 
 Generated slide PNGs are always retained under `assets/generated-slides/`, and Deckit produces standard automatic preview artifact(s): `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. Do not present raw PNGs, a single PNG, or a stitched long image as final delivery choices in preflight. If the user asks for a PNG/preview/long image, keep the generated slide PNGs and the standard vertical preview artifact, but still ask for or infer only `pptx` or `pdf` as the final packaged deliverable unless the user explicitly requests a partial image-only run.
 
@@ -85,7 +88,7 @@ Use this style for expanded options:
 
 ```text
 为了避免跑偏，我先确认几个默认值。
-默认：B / 8页 / PPTX / 接受粗大纲
+默认：B / 8页 / AUTO / PPTX / 接受粗大纲
 粗大纲：时代背景 → 生平节点 → 代表实验 → 科学影响 → 后世纪念
 
 回复“默认”直接开始；或只回复要改的短码，可多个组合：
@@ -94,6 +97,8 @@ P = premium
 5 = 5页
 12 = 12页
 PDF = 输出 PDF
+AUTO = 自适应默认
+HAND = 米白手写学术讲义
 O = 修改粗大纲
 
 例：q 12 pdf
@@ -103,7 +108,7 @@ O = 修改粗大纲
 If aspect ratio is part of the decision, keep the same punctuation-free code style:
 
 ```text
-默认：B / 8页 / 169 / PPTX / 接受粗大纲
+默认：B / 8页 / AUTO / 169 / PPTX / 接受粗大纲
 916 = 竖屏 9:16
 43 = 4:3
 11 = 1:1
@@ -218,11 +223,11 @@ When a run fails, looks suspicious, or the user asks why a route was chosen, pre
 
 ## Default Flow
 
-1. `deck-producer` interprets the request, source, target output, and budget; if needed, it runs the preflight gate before artifact production. It records `production_mode: image-first`.
+1. `deck-producer` interprets the request, source, target output, budget, and visual style; if needed, it runs the preflight gate before artifact production. It records `production_mode: image-first` and `visual_style_id`.
 2. If the source is a `.pdf` or an `http(s)` URL, `document-ingestor` converts it into `source/input.md`.
 3. `story-architect` creates `work/deck-brief.md` when the source needs argument shaping.
 4. `slide-storyboarder` creates `work/storyboard.md`.
-5. `visual-director` creates model-ready image prompts in `prompts/*.md`.
+5. `visual-director` loads the resolved style specification, records it in `prompts/README.md`, and creates model-ready image prompts in `prompts/*.md`.
 6. If Deckit was explicitly invoked and `$imagegen` is available, invoke `$imagegen` once per slide prompt. In built-in mode, copy or move the generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`. If `$imagegen` is truly unavailable, stop at the prompt pack and report that generated images are pending.
 7. Package the generated PNGs according to `requested_output.delivery_target` after all expected PNGs exist. Use the repository packaging helper only when it is available; otherwise use a local image-container packaging path that keeps the same one-image-per-page invariant. Ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. Do not wait for a separate "continue" instruction during an explicit Deckit run.
 8. `deck-producer` performs a final quality check (manual checklist or available development review helper) and summarizes deliverables.

@@ -2,7 +2,7 @@
 
 Deckit is a Codex plugin for producing image-first presentation decks end to end.
 
-Current release: **v0.4.3**.
+Current release: **v0.4.4**.
 
 ## What Deckit Does
 
@@ -11,11 +11,23 @@ Deckit turns a topic, note, Markdown document, PDF, or URL into a presentation w
 1. Ingest or frame the source material.
 2. Build a deck brief and narrative arc.
 3. Create a slide-by-slide storyboard.
-4. Write image-generation prompts for each full-slide visual.
-5. Generate actual slide images through the official image generation capability when available.
-6. Package generated slide PNGs into the requested final delivery target.
-7. Produce standard preview artifact(s): `dist/preview.png` for decks up to 32 slides, or numbered `dist/preview-XX.png` files for longer decks.
-8. Review and audit the output before delivery.
+4. Resolve a reusable visual style or preserve the user's custom style.
+5. Write image-generation prompts for each full-slide visual.
+6. Generate actual slide images through the official image generation capability when available.
+7. Package generated slide PNGs into the requested final delivery target.
+8. Produce standard preview artifact(s): `dist/preview.png` for decks up to 32 slides, or numbered `dist/preview-XX.png` files for longer decks.
+9. Review and audit the output before delivery.
+
+## Visual Style Library
+
+Reusable styles live under `plugins/deckit/assets/visual-styles/`. The machine-readable `catalog.json` provides stable IDs and preflight short codes; each style's Markdown file contains the prompt contract used by `visual-director`.
+
+Initial styles:
+
+- `AUTO` / `adaptive-default` — derive a concrete style from the deck's content.
+- `HAND` / `notability-handwritten-cn` — warm ivory, deep-navy handwritten Chinese academic notes with constrained highlight colors.
+
+Deckit's recommendation gate displays a recommended style. Expanded preflight lets users switch styles by short code without adding another approval round. Run `uv run deckit-dev list-styles` from `tools/` to validate and inspect the library.
 
 ## Current Production Route
 
@@ -48,7 +60,7 @@ The marketplace entry should point to this repository as a git subdirectory sour
     "source": "git-subdir",
     "url": "forestsheep911/deckit",
     "path": "plugins/deckit",
-    "ref": "v0.4.3"
+    "ref": "v0.4.4"
   }
 }
 ```
@@ -56,7 +68,7 @@ The marketplace entry should point to this repository as a git subdirectory sour
 Useful verification commands:
 
 ```powershell
-git ls-remote --tags https://github.com/forestsheep911/deckit.git refs/tags/v0.4.3
+git ls-remote --tags https://github.com/forestsheep911/deckit.git refs/tags/v0.4.4
 ```
 
 ```powershell
@@ -84,6 +96,8 @@ plugins/deckit/skills/visual-director/SKILL.md
 plugins/deckit/skills/document-ingestor/SKILL.md
 plugins/deckit/references/workflow.md
 plugins/deckit/references/budget-modes.md
+plugins/deckit/references/visual-style-library.md
+plugins/deckit/assets/visual-styles/catalog.json
 ```
 
 Development docs live under:
@@ -111,6 +125,6 @@ See `AGENTS.md` for the detailed release and Windows marketplace-upgrade trouble
 
 - `docs/install-and-use.md` — local install and workflow notes.
 - `docs/development-layout.md` — repository layout and dev-tool notes.
-- `docs/v1-status.md` — current V1 status, updated for v0.4.3.
+- `docs/v1-status.md` — current V1 status, updated for v0.4.4.
 - `docs/production-mode-insights.md` — archived production-mode research.
 - `docs/pptx-native-experiment.md` — archived native-PPTX experiment notes.

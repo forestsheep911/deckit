@@ -20,6 +20,12 @@ Reuse the slide IDs from `work/storyboard.md` verbatim as filenames (`prompts/<s
 
 ## Guidance
 
+- Before choosing palette or treatment, read `../../assets/visual-styles/catalog.json` and resolve `visual_style_id` from `run.json` or the deck brief. Follow `../../references/visual-style-library.md`.
+- For a library style, read its referenced specification completely and treat it as a global constraint. For `adaptive-default`, make concrete style choices from the content. For `custom`, preserve the user's run-specific visual prompt from the deck brief.
+- Record `visual_style_id: <id>` near the top of `prompts/README.md`, immediately after the production-mode line.
+- Repeat critical style requirements in every per-slide prompt; a global reference alone is not enough for image-generation consistency.
+- If an explicitly requested style ID or code is unknown, show the valid catalog choices instead of silently substituting the default.
+
 - Make visuals serve the slide's argument.
 - Avoid decorative-only cinematic backgrounds.
 - Prefer slide-oriented visual patterns: timelines, comparison tables, process diagrams, evidence cards, maps, charts, and structured callouts.
@@ -35,3 +41,5 @@ Reuse the slide IDs from `work/storyboard.md` verbatim as filenames (`prompts/<s
 ## Reference Sample
 
 See `../../assets/sample-decks/sanmiao-victory-day/` for an image-first sample that fixes palette and typography globally and bans common generator failures explicitly. Reuse the per-slide structure (Meta / Visual Concept / Composition / Text to Render / Style / Negative) and the practice of repeating the exact characters to render in a "Text to Render" block.
+
+For reusable style selection and the calibrated Chinese handwritten academic-notes treatment, see `../../assets/visual-styles/catalog.json` and `../../assets/visual-styles/notability-handwritten-cn.md`.
