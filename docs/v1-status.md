@@ -1,32 +1,34 @@
-# Deckit V1 Status — v0.4.4
+# Deckit Status — v0.5.0
 
 This is the closing report for the six-week V1 validation roadmap defined in [v1-roadmap.md](v1-roadmap.md). It records what shipped, what did not, and what is queued for V2+.
 
-> Current release note: v0.4.4 adds an extensible visual style library with stable IDs and preflight short codes, ships `adaptive-default` and the calibrated `notability-handwritten-cn` preset, records `visual_style_id` in runs and prompt packs, and adds CLI validation/listing. The active production route remains image-first only, with the native-PPTX firewall and delivery audits unchanged.
+> Current release note (v0.5.0, 2026-10-12): `native-reconstructor` adds optional Gorden/PowerPoint Copilot post-processing after bitmap approval, off by default, with cancellation/Gorden fallback when Copilot is unavailable. See [native reconstruction](../plugins/deckit/references/native-reconstruction.md). Six skills coordinate the workflow. Baseline dev audits remain strict image-container checks; derivative structure, visual fidelity, and edit/save/close/reopen acceptance are separate. The v0.4.4 visual style library is retained.
 
 > Packaging note: image-first `.pptx` delivery is allowed only as a non-editable container around generated PNG slides. Use `deckit-dev package-images --run <run-folder>` for this stable packaging path and `deckit-dev audit-pptx --pptx <file.pptx>` to verify the result; do not hand-author minimal OpenXML PPTX packages or substitute visual native-PPTX layouts.
 
 > Routing note: topic-only Deckit requests should produce deck artifacts rather than plain prose answers unless the user explicitly asks for text-only output.
 
-## V1 At a Glance
+## Current Plugin At a Glance
 
-- Plugin version: **0.4.4** (was 0.1.0 at the start of the roadmap; v0.4.x keeps image-first generation the only active path).
-- Specialist skills: **5** (was 4).
+- Plugin version: **0.5.0**. Primary generation remains `image-first`; reconstruction is optional downstream processing.
+- Specialist skills: **6** (was 5 before v0.5.0).
   - `deck-producer`, `story-architect`, `slide-storyboarder`, `visual-director` (V1 originals).
   - `document-ingestor` (added in Week 5 as the post-W4 route).
+  - `native-reconstructor` (v0.5.0 optional reconstruction coordinator).
 - Production mode recognized by the active workflow: `image-first` only.
 - Source kinds accepted by `new-run`: text / Markdown, `.pdf`, `http(s)` URL.
 - Quality gate: `deckit-dev review --run <name>` writes `dist/review.md` with structural checks for run.json validity, brief sections, storyboard slide blocks, slide-id format, per-archetype support-point band, archetype-name validation, slide-count band per budget, and prompts ↔ storyboard mapping.
 
-### Inspect Output Snapshot
+### Current Plugin Inspection and Historical Marketplace Snapshots
 
 ```text
 === INSPECT ===
 plugin: deckit
-version: 0.4.4
-skills: 5
+version: 0.5.0
+skills: 6
 - deck-producer: skills\deck-producer
 - document-ingestor: skills\document-ingestor
+- native-reconstructor: skills\native-reconstructor
 - slide-storyboarder: skills\slide-storyboarder
 - story-architect: skills\story-architect
 - visual-director: skills\visual-director
@@ -42,12 +44,12 @@ plugins: 1
 - deckit: C:\Users\fores\dev\trytry\deckit\plugins\deckit
 ```
 
-## What V1 Ships
+## What the Plugin Ships
 
 ### Plugin
 
-- Five specialist `SKILL.md` files with explicit roles, outputs, do-nots, and (where relevant) reference samples.
-- Five references: [workflow](../plugins/deckit/references/workflow.md), [budget-modes](../plugins/deckit/references/budget-modes.md), [slide-archetypes](../plugins/deckit/references/slide-archetypes.md), [critique-checklist](../plugins/deckit/references/critique-checklist.md), and [visual-style-library](../plugins/deckit/references/visual-style-library.md). Terminology is unified across files, including `visual_style_id`.
+- Six specialist `SKILL.md` files with explicit roles, outputs, do-nots, and (where relevant) reference samples.
+- Six references: [workflow](../plugins/deckit/references/workflow.md), [budget-modes](../plugins/deckit/references/budget-modes.md), [slide-archetypes](../plugins/deckit/references/slide-archetypes.md), [critique-checklist](../plugins/deckit/references/critique-checklist.md), [visual-style-library](../plugins/deckit/references/visual-style-library.md), and [native-reconstruction](../plugins/deckit/references/native-reconstruction.md). Terminology is unified across files, including `visual_style_id`.
 - One in-tree teaching sample: `plugins/deckit/assets/sample-decks/sanmiao-victory-day/` (image-first), referenced from `story-architect` and `visual-director`.
 
 ### Documentation
@@ -60,7 +62,7 @@ plugins: 1
 
 ### Dev Tool (`deckit-dev`)
 
-Six subcommands:
+Development commands:
 
 - `inspect` — verify plugin manifest and skills.
 - `inspect-marketplace` — verify a marketplace JSON; cross-repo paths handled.
@@ -81,7 +83,7 @@ Six subcommands:
 
 ## What V1 Did Not Ship (deferred, as planned)
 
-- Editable PowerPoint assembly — removed from the active V1/V0.4 route. Historical experiments remain archived, but this route should not be offered by the plugin until it can clear a separate product-quality bar.
+- Direct native PowerPoint generation remains outside the primary route. v0.5.0 adds optional reconstruction of approved bitmaps through external Gorden or PowerPoint Copilot capabilities; it does not bundle those dependencies or guarantee all-vector output.
 - `style-director` skill — palette / typography / template management, beyond the in-prompt style guidance image-first decks already use.
 - `youtube-ingestor`, `audio-transcriber`, DOCX / PPTX / XLSX ingestion.
 - Local web UI / studio.
@@ -105,7 +107,7 @@ The Week 4 decision and Week 5 result reorder the V2 backlog from the original v
 
 - A new reader can produce the first deck-brief and storyboard within one hour using `install-and-use.md`. (Validated in W2; the actual time was under 15 minutes for a 5-slide topic.)
 - No conflicting terminology between SKILL.md and references (`production_mode` vs `budget_mode` are uniformly named after the W6 sweep).
-- `deckit-dev inspect`, `list-styles`, and `inspect-marketplace` pass with the v0.4.4 manifest.
+- v0.5.0: 13 development tests cover previews, the retained visual style library, reconstruction defaults, and separation of native derivatives from the strict baseline audit. Plugin inspection finds six valid skills. These checks do not constitute a new end-to-end Gorden or Copilot reconstruction run.
 - The quality gate is callable, not aspirational: `deckit-dev review` produced findings on every test run during the roadmap.
 - The image-first artifact loop has been exercised through actual bitmap generation once: 8 PNG slides were generated from `prompts/*.md`, copied into the run folder, and reviewed in `dist/image-first-review.md`.
 

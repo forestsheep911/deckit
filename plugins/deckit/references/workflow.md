@@ -24,6 +24,7 @@ Use this style:
 - 页数：8 页
 - 风格：自适应默认（`adaptive-default`）
 - 输出：PPTX（图片式非编辑容器），并自动生成 preview
+- 拆元素：默认不拆；位图定稿后可选 Gorden 或 PowerPoint Copilot
 - 粗大纲：时代背景 → 生平节点 → 代表实验 → 科学影响 → 后世纪念
 
 请选择：
@@ -131,7 +132,7 @@ Exceptions: answer directly when the user asks about Deckit's capabilities, inst
 
 ## Image-First Flow
 
-Deckit v0.4 has one active route: `image-first`.
+Deckit has one primary route: `image-first`, with optional user-selected reconstruction after visual approval. Keep reconstruction off by default and record it separately from `production_mode`.
 
 The default output sequence for explicit Deckit invocation is:
 
@@ -145,15 +146,15 @@ The default output sequence for explicit Deckit invocation is:
 
 In this workflow, "image" means an actual image-generation step through the official `$imagegen` skill. A PowerPoint file with full-slide PNGs is only a delivery container after the PNGs are generated; it is not the production route. Do not interpret image-first as "draw slides with PIL/canvas/HTML/SVG and insert them into PPTX."
 
-Do not offer alternate native-PowerPoint or mixed production routes as active choices. If the user asks for editable PowerPoint, explain that this plugin currently produces generated slide images, packaged into PPTX as non-editable full-slide images.
+Do not offer direct native generation instead of image generation. If the user asks for editable PowerPoint, explain the bitmap-first sequence and offer downstream Gorden or PowerPoint Copilot reconstruction, or cancellation. Follow [native reconstruction](native-reconstruction.md).
 
-Do not delegate an Deckit run to installed presentation/PPTX skills or plugins, even if they are available locally. This includes Codex `Presentations` and Anthropic `pptx`. Those skills are native-PPTX assemblers and conflict with the active v0.4 route.
+Do not delegate primary generation to generic presentation/PPTX assemblers. The specific external conversion handoff is the selected `GordenImage2PPTX` skill after approved Deckit images exist; the Copilot route operates inside PowerPoint.
 
 ## Native PPTX Firewall
 
-PPTX is allowed only as a container, never as a production method.
+In primary production, PPTX is a container, never a replacement for image generation. A user-selected reconstruction derivative is an additional artifact after approved bitmaps exist.
 
-When the user says "make a PPT", "create a PowerPoint", "make slides", "produce a presentation", "制作 PPT", "做 PPT", "帮我做个演示文稿", or "生成 PowerPoint" without explicitly requiring editable objects, interpret the request as image-first slide generation. Do not ask the user to choose a production mode; native-PPTX is not an active Deckit option.
+When the user says "make a PPT", "create a PowerPoint", "make slides", "produce a presentation", "制作 PPT", "做 PPT", "帮我做个演示文稿", or "生成 PowerPoint" without explicitly requiring editable objects, interpret it as image-first generation. Do not ask for a production mode; direct native generation is not an option, and downstream reconstruction remains off by default.
 
 Allowed outputs:
 
@@ -164,7 +165,7 @@ Allowed outputs:
 - `assets/generated-slides/<slide-id>.png` from `$imagegen`
 - `.pptx` package containing the generated PNG slides as full-slide images
 
-Forbidden outputs and fallbacks:
+Forbidden substitutes for primary image generation:
 
 - native editable PowerPoint decks
 - PowerPoint shape-by-shape slide construction
@@ -173,9 +174,9 @@ Forbidden outputs and fallbacks:
 - hybrid decks that mix native editable PowerPoint layouts with image-first slides
 - delegation to generic presentation/PPTX plugins during a Deckit run
 
-If the user explicitly requires editable native PowerPoint text boxes, shapes, or charts, state that Deckit does not support editable native-PPTX production in the active route. Continue only if they accept image-first slides.
+If the user explicitly requires editable objects, offer optional reconstruction after bitmap approval. Gorden defaults to native text plus picture layers; Copilot can restore suitable simple shapes, verified from saved output. Neither guarantees native chart data or all-vector artwork. Honor the requested route/scope and record it separately.
 
-Visual polish does not make a deck image-first. A native PowerPoint deck with attractive backgrounds, text boxes, shapes, timelines, and images is still forbidden native-PPTX. If `$imagegen` is truly unavailable or fails and therefore cannot produce `assets/generated-slides/<slide-id>.png` for every storyboard slide, stop at the prompt pack; do not create a substitute visual PPTX. Do not choose this branch merely because the user has not written a separate "continue" message.
+Visual polish does not make a deck image-first. Native shapes or attractive backgrounds cannot replace the generated bitmap stage. If `$imagegen` is truly unavailable or fails and therefore cannot produce `assets/generated-slides/<slide-id>.png` for every storyboard slide, stop at the prompt pack; do not create a substitute visual PPTX. Do not choose this branch merely because the user has not written a separate "continue" message.
 
 Do not treat the built-in `$imagegen` tool's lack of a destination-path argument as unavailability. In normal built-in mode, `$imagegen` saves generated images under `$CODEX_HOME/generated_images/...`; for Deckit runs, generate first, then copy or move the selected output PNGs into `<run-folder>/assets/generated-slides/<slide-id>.png`.
 
@@ -196,7 +197,15 @@ Packaging requirements:
 - Do not hand-author minimal OpenXML packages for delivery; use a proven PPTX writer.
 - Validate after packaging with an automated or manual audit and keep the result in `dist/review.md` or `dist/debug-evidence.md`.
 
-The PPTX audit passes only when each slide contains exactly one full-slide picture. Text boxes, PowerPoint shapes, lines, charts, tables, or multiple slide-canvas objects mean the file is native-PPTX and not a valid Deckit deliverable.
+The baseline PPTX audit passes only when each slide contains exactly one full-slide picture. Additional native objects fail that container check. The separately stored reconstruction derivative uses the native acceptance checklist; do not change the container audit to accept it.
+
+## Optional Reconstruction After Bitmap Review
+
+Reconstruction is off by default. Complete the bitmap delivery before offering a follow-up choice if the user has not opted in: `NONE`, `GORDEN`, or `COPILOT`. No reply starts no conversion. A route already requested needs no repeat confirmation. Confirm the visual baseline before conversion only when it has not already been approved.
+
+Use `native-reconstructor` and [native-reconstruction.md](native-reconstruction.md) for dependency checks, execution and acceptance. If Microsoft 365 Copilot is unavailable in PowerPoint, explicitly offer **cancel reconstruction** or **use Gorden**, and wait for the choice. Gorden must have the external `GordenImage2PPTX` skill and `$imagegen` available.
+
+Retain `production_mode: image-first`; record route, scope, source hashes, status, checkpoints and acceptance in `run.json.native_conversion`. Conversion work belongs in `work/native/<conversion-id>/`, final derivatives and their rendered previews in `dist/native/<conversion-id>/`. Keep the baseline image delivery and preview intact. Existing development `review`/`audit-pptx` cover the baseline; native structure, visual fidelity, and PowerPoint edit/save/close/reopen are separate checks.
 
 ## PDF Delivery and Standard Preview
 
@@ -231,6 +240,7 @@ When a run fails, looks suspicious, or the user asks why a route was chosen, pre
 6. If Deckit was explicitly invoked and `$imagegen` is available, invoke `$imagegen` once per slide prompt. In built-in mode, copy or move the generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`. If `$imagegen` is truly unavailable, stop at the prompt pack and report that generated images are pending.
 7. Package the generated PNGs according to `requested_output.delivery_target` after all expected PNGs exist. Use the repository packaging helper only when it is available; otherwise use a local image-container packaging path that keeps the same one-image-per-page invariant. Ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. Do not wait for a separate "continue" instruction during an explicit Deckit run.
 8. `deck-producer` performs a final quality check (manual checklist or available development review helper) and summarizes deliverables.
+9. If reconstruction was selected, `native-reconstructor` processes approved pages with the chosen method and separate acceptance. Otherwise the bitmap result is complete; reconstruction is an optional follow-up.
 
 ## Source Inputs (V1)
 
@@ -278,11 +288,11 @@ Then produce artifacts inside that run folder:
 - If the user wants slide planning but no visuals, stop after `slide-storyboarder`.
 - If the user wants image prompts, run `visual-director`.
 - If Deckit was explicitly invoked, or if the user wants generated slide images, run `visual-director` first, then invoke `$imagegen` for each prompt. Do not substitute local programmatic rendering.
-- If the user asks for an editable PPTX, state the current limitation and continue only if they accept image-first, non-editable full-slide images.
+- If the user asks for an editable PPTX, explain bitmap-first production plus optional Gorden/PowerPoint Copilot reconstruction. Ask only for a missing route; preserve a route already selected.
 - If Deckit was explicitly invoked, or if the user asks for generated images packaged as PPTX, generate PNGs first, then place those PNGs into a PPTX as a non-editable container.
 - If the user asks for PDF output, still generate PNGs first, then package the PNGs into an image-only PDF.
 - If the user asks for a PNG preview or long-image style overview, do not treat it as the final delivery target; produce the standard preview artifact(s) from the generated slide PNGs (`dist/preview.png` up to 32 slides; numbered `dist/preview-XX.png` files above 32 slides) and choose/ask for PPTX or PDF as the final package.
-- If another installed presentation/PPTX skill offers to help, do not route to it. Keep the run inside Deckit's own skill chain and `$imagegen`.
+- Do not route primary generation to another presentation/PPTX assembler. User-selected Gorden conversion after visual approval is the specific downstream exception.
 
 ## Artifact Paths
 

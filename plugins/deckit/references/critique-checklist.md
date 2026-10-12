@@ -34,3 +34,12 @@ Use this checklist before treating a deck plan, prompt pack, or packaged deliver
 - Expensive steps are explicit.
 - Future work is separated from v1 deliverables.
 - `dist/review.md` is archived in the run folder with the manual or automated review result.
+
+## Optional Reconstruction
+
+- Reconstruction was explicitly selected; defaults do not enable it.
+- Chosen route and dependencies are recorded; unavailable PowerPoint Copilot offers cancellation or Gorden without switching automatically.
+- Scope, source hashes and original bitmap artifacts are preserved.
+- Native derivative previews come from the saved PPTX, not the original PNGs.
+- Structural, visual and edit/save/close/reopen acceptance are recorded separately using [native-reconstruction.md](native-reconstruction.md).
+- Native text, simple shapes and retained image layers are described accurately; unresolved checks remain partial or unverified.

@@ -161,9 +161,9 @@ Inside Cursor, in `<workdir>`, ask the installed `deckit` plugin to produce the 
 
 If you explicitly invoke Deckit, topic-only requests are deck requests. For example, `@deckit 介绍一下 F-16 战斗机` should start a Deckit image-first workflow and produce deck artifacts; it should not stop at a plain prose introduction merely because the words "PPT" or "slides" were not present.
 
-For generated slides, use the prompt pack with the official `$imagegen` skill and save PNGs under `<run-name>/assets/generated-slides/`. If you later need a PPTX, package those already generated PNGs as full-slide images; do not switch to a native-PPTX assembly path.
+For generated slides, use the prompt pack with the official `$imagegen` skill and save PNGs under `<run-name>/assets/generated-slides/`. Package those PNGs as the baseline PPTX/PDF. Optional element reconstruction happens only after visual approval and explicit selection; it never replaces image generation.
 
-If the user says "make a PPT", "create a PowerPoint", "制作 PPT", or another ambiguous presentation request, Deckit treats that as an image-first slide request. A `.pptx` file is allowed only after slide PNGs exist, and only as a non-editable container with one generated full-slide image per page. If the user explicitly requires editable PowerPoint text boxes, shapes, or charts, Deckit should state that editable native-PPTX production is not supported by the active route rather than switching to a native PowerPoint workflow.
+If the user says "make a PPT", "create a PowerPoint", "制作 PPT", or another ambiguous presentation request, Deckit treats that as image-first production, with reconstruction off by default. The baseline PPTX contains one generated full-slide image per page. If the user explicitly requires editable elements, offer Gorden or PowerPoint Copilot reconstruction after bitmap review; do not start direct native generation.
 
 Use the stable packaging command for PPTX containers:
 
@@ -179,7 +179,7 @@ Audit any PPTX deliverable, especially when debugging a suspicious run:
 uv run deckit-dev audit-pptx --pptx "<workdir>\<run-name>\dist\<run-name>.pptx"
 ```
 
-The audit must report exactly one picture per slide. If it finds text boxes, shapes, lines, charts, or tables, the file is native-PPTX and is not a valid Deckit image-first deliverable. Do not create a visually rich native PowerPoint deck and then backfill Deckit artifacts afterward; if generated PNGs do not exist yet, stop at the prompt pack.
+The baseline audit must report exactly one picture per slide. Additional native objects fail this image-container check. Reconstructed derivatives have a separate acceptance checklist and must not use this audit as their acceptance. Do not create a native deck first and backfill Deckit artifacts; if generated PNGs do not exist yet, stop at the prompt pack.
 
 When debugging, preserve `dist/review.md`, `audit-pptx` output, exact commands, and paths to the source, brief, storyboard, prompts, generated PNGs, and PPTX. Prefer writing this trace to `<run-name>/dist/debug-evidence.md`.
 
@@ -214,9 +214,19 @@ The artifacts produced during the walk-through stay outside the repo (`local-run
 - Run: `<workdir>\pin-python-version\`
 - Files produced: `work/deck-brief.md`, `work/storyboard.md`, `prompts/README.md`, `prompts/00_cover.md` ... `prompts/04_closing.md`
 
+## Optional Element Reconstruction (v0.5.0)
+
+After bitmap review, choose `NONE` (default), `GORDEN`, or `COPILOT`, with the whole deck or specific pages as scope. The coordinator uses [native-reconstructor](../plugins/deckit/skills/native-reconstructor/SKILL.md) and the [reconstruction reference](../plugins/deckit/references/native-reconstruction.md).
+
+- Gorden uses the externally installed `GordenImage2PPTX` skill from Gorden Super PPT Skills plus image generation. It restores native text and movable image layers, with a picture frame by default. Check the actual installed version and dependencies; do not assume it is bundled.
+- Copilot uses Microsoft 365 Copilot inside PowerPoint. Verify usable editing and image attachment in the current app, not just a license label or GitHub Copilot installation.
+- If PowerPoint Copilot is unavailable, offer cancellation or Gorden and wait for the user's choice. If Gorden is absent, offer installation or cancellation; no automatic route change.
+- Keep conversion work under `work/native/<conversion-id>/` and derivatives under `dist/native/<conversion-id>/`. Preserve the baseline delivery and `production_mode: image-first`; record `native_conversion` separately in `run.json`.
+- The dev helper's baseline review does not validate a native derivative. Complete the separate structure/visual/application checklist, including editing an existing text object, independently moving an object, saving, closing and reopening an acceptance copy. Unavailable application checks remain unverified.
+
 ## Known Limitations
 
-- Native PPTX assembly is not an active v0.4 route. Generated PNGs may be packaged into PPTX as non-editable full-slide images, but image generation must happen first.
-- Hybrid mode is not an active v0.4 route.
+- Direct native-PPTX generation is not a production route; optional reconstruction starts only after approved generated bitmaps exist.
+- Reconstruction relies on external Gorden or PowerPoint Copilot capabilities and does not promise all-vector artwork, native chart data, connectors, or animation.
 - `document-ingestor` (PDF + URL) handles plain documents only — no OCR, no JavaScript-rendered pages, no authenticated URLs. See `plugins/deckit/skills/document-ingestor/SKILL.md` for the full limitations list.
 - `youtube-ingestor`, `audio-transcriber`, and DOCX/PPTX/XLSX ingestion are V2 work, not V1.

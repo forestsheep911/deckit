@@ -227,6 +227,11 @@ def new_run(
             "delivery_target": delivery_target,
             "target_slide_count": target_slides,
         },
+        "native_conversion": {
+            "route": "none",
+            "status": "not-requested",
+            "slide_ids": [],
+        },
         "artifacts": artifacts,
     }
     (run_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

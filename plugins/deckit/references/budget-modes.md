@@ -1,5 +1,7 @@
 # Budget Modes
 
+Optional downstream reconstruction has a separate user choice and cost. `quick`, `balanced`, `premium`, or accepting defaults never enables it automatically. Gorden can require additional image generation; PowerPoint Copilot adds app-processing time. See [native reconstruction](native-reconstruction.md).
+
 Deckit v0.4 has one active route for explicit Deckit invocation: image-first with actual image generation, review, standard preview generation, and packaging of generated PNGs into the requested final delivery target (`pptx` or `pdf`). Budget mode says how large and polished that route is; it must not change the route into "plain prose", "outline only", or "prompt pack only" unless the user explicitly asks for a partial/text-only artifact or `$imagegen` is truly unavailable. The default when the user is silent is `balanced`.
 
 When a prompt is high-risk vague, ask the preflight clarification question set before choosing final budget and slide count. If the user says "use defaults" or answers partially, use `balanced`, a standard 8-slide target, and `pptx` as the final delivery target unless the user chooses `pdf`.
