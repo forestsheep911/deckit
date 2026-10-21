@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 from deckit_dev.visual_styles import load_visual_style_catalog, resolve_visual_style
+from deckit_dev.flow_artifacts import require_flow_artifacts, scan_flow_artifacts
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -743,6 +744,8 @@ def _expected_preview_paths(run_dir: Path, slide_count: int) -> list[Path]:
 
 def _scan_image_first_artifacts(run_dir: Path, storyboard_ids: list[str]) -> list[tuple[str, str, str]]:
     findings: list[tuple[str, str, str]] = []
+    slide_blocks, _ = _parse_storyboard(run_dir / "work" / "storyboard.md")
+    findings.extend(scan_flow_artifacts(run_dir, slide_blocks))
     generated_dir = run_dir / "assets" / "generated-slides"
     generated_pngs = sorted(generated_dir.glob("*.png")) if generated_dir.is_dir() else []
     generated_ids = {p.stem for p in generated_pngs}
@@ -821,6 +824,7 @@ def _package_images(run_dir: Path, out_path: Path | None) -> int:
         raise ValueError(f"cannot package images because storyboard is invalid: {detail}")
 
     slide_ids = [slide_id for slide_id, _ in slide_blocks]
+    require_flow_artifacts(run_dir, slide_blocks)
     if not slide_ids:
         raise ValueError("cannot package images because storyboard contains no slides")
 
@@ -926,6 +930,7 @@ def _require_generated_slide_images(run_dir: Path) -> tuple[list[str], list[Path
         raise ValueError(f"cannot package generated slide images because storyboard is invalid: {detail}")
 
     slide_ids = [slide_id for slide_id, _ in slide_blocks]
+    require_flow_artifacts(run_dir, slide_blocks)
     if not slide_ids:
         raise ValueError("cannot package generated slide images because storyboard contains no slides")
 

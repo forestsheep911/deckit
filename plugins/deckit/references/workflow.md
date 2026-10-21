@@ -144,7 +144,7 @@ The default output sequence for explicit Deckit invocation is:
 - the requested final delivery target; default is `dist/<deck-name>.pptx` as a non-editable container around generated PNGs
 - `dist/preview.png` for decks up to 32 slides, or numbered `dist/preview-XX.png` files for longer decks, as the standard medium-size vertical preview artifact(s)
 
-In this workflow, "image" means an actual image-generation step through the official `$imagegen` skill. A PowerPoint file with full-slide PNGs is only a delivery container after the PNGs are generated; it is not the production route. Do not interpret image-first as "draw slides with PIL/canvas/HTML/SVG and insert them into PPTX."
+Ordinary slide images require actual official `$imagegen`. The only primary-production exception is a selected complex workflow page under [complex-flows.md](complex-flows.md): retain its graph, render and review its full-slide PNG, and package it in the same image container. Simple processes and other pages remain generated. This is a per-page exception, never permission to draw ordinary slides with PIL/canvas/HTML/SVG or native PowerPoint shapes.
 
 Do not offer direct native generation instead of image generation. If the user asks for editable PowerPoint, explain the bitmap-first sequence and offer downstream Gorden or PowerPoint Copilot reconstruction, or cancellation. Follow [native reconstruction](native-reconstruction.md).
 
@@ -170,13 +170,13 @@ Forbidden substitutes for primary image generation:
 - native editable PowerPoint decks
 - PowerPoint shape-by-shape slide construction
 - python-pptx scripts that build slide layouts, text boxes, charts, or shapes
-- browser-rendered screenshots, SVG, HTML/CSS, PIL, or matplotlib slides pretending to be image-first generation
+- browser-rendered screenshots, SVG, HTML/CSS, PIL, or matplotlib slides replacing ordinary imagegen (selected complex-flow PNGs are explicitly recorded screenshots)
 - hybrid decks that mix native editable PowerPoint layouts with image-first slides
 - delegation to generic presentation/PPTX plugins during a Deckit run
 
 If the user explicitly requires editable objects, offer optional reconstruction after bitmap approval. Gorden defaults to native text plus picture layers; Copilot can restore suitable simple shapes, verified from saved output. Neither guarantees native chart data or all-vector artwork. Honor the requested route/scope and record it separately.
 
-Visual polish does not make a deck image-first. Native shapes or attractive backgrounds cannot replace the generated bitmap stage. If `$imagegen` is truly unavailable or fails and therefore cannot produce `assets/generated-slides/<slide-id>.png` for every storyboard slide, stop at the prompt pack; do not create a substitute visual PPTX. Do not choose this branch merely because the user has not written a separate "continue" message.
+Visual polish does not make a deck image-first. Native shapes or attractive backgrounds cannot replace the generated bitmap stage. If `$imagegen` is truly unavailable or fails on an ordinary page, stop at available artifacts and report pending pages; the complex-flow exception must not replace ordinary imagegen. A failed diagram page is also pending. Do not choose this branch merely because the user has not written a separate "continue" message.
 
 Do not treat the built-in `$imagegen` tool's lack of a destination-path argument as unavailability. In normal built-in mode, `$imagegen` saves generated images under `$CODEX_HOME/generated_images/...`; for Deckit runs, generate first, then copy or move the selected output PNGs into `<run-folder>/assets/generated-slides/<slide-id>.png`.
 
@@ -237,7 +237,7 @@ When a run fails, looks suspicious, or the user asks why a route was chosen, pre
 3. `story-architect` creates `work/deck-brief.md` when the source needs argument shaping.
 4. `slide-storyboarder` creates `work/storyboard.md`.
 5. `visual-director` loads the resolved style specification, records it in `prompts/README.md`, and creates model-ready image prompts in `prompts/*.md`.
-6. If Deckit was explicitly invoked and `$imagegen` is available, invoke `$imagegen` once per slide prompt. In built-in mode, copy or move the generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`. If `$imagegen` is truly unavailable, stop at the prompt pack and report that generated images are pending.
+6. Invoke `$imagegen` for each ordinary slide prompt and copy the selected results into `assets/generated-slides/`. Invoke the bundled `complex-flow` skill only for the pages selected in the storyboard; retain source data and render receipts. Review actual PNGs from both methods. Missing imagegen on ordinary pages or missing diagram capture leaves those pages pending; do not substitute another route or package an incomplete deck.
 7. Package the generated PNGs according to `requested_output.delivery_target` after all expected PNGs exist. Use the repository packaging helper only when it is available; otherwise use a local image-container packaging path that keeps the same one-image-per-page invariant. Ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. Do not wait for a separate "continue" instruction during an explicit Deckit run.
 8. `deck-producer` performs a final quality check (manual checklist or available development review helper) and summarizes deliverables.
 9. If reconstruction was selected, `native-reconstructor` processes approved pages with the chosen method and separate acceptance. Otherwise the bitmap result is complete; reconstruction is an optional follow-up.
@@ -278,7 +278,7 @@ Then produce artifacts inside that run folder:
 - `work/deck-brief.md`
 - `work/storyboard.md`
 - `prompts/README.md` and `prompts/<slide-id>.md`
-- `assets/generated-slides/<slide-id>.png` (only after actual image generation)
+- `assets/generated-slides/<slide-id>.png` (after actual imagegen or a selected, checked complex-flow render)
 
 ## Skip Rules
 
@@ -287,7 +287,7 @@ Then produce artifacts inside that run folder:
 - If the user only wants an outline, stop after `story-architect`.
 - If the user wants slide planning but no visuals, stop after `slide-storyboarder`.
 - If the user wants image prompts, run `visual-director`.
-- If Deckit was explicitly invoked, or if the user wants generated slide images, run `visual-director` first, then invoke `$imagegen` for each prompt. Do not substitute local programmatic rendering.
+- If Deckit was explicitly invoked, or if the user wants generated slide images, run `visual-director` first, then invoke `$imagegen` for ordinary prompts and `complex-flow` only for explicitly selected complex workflow pages. Simple flows do not trigger the renderer.
 - If the user asks for an editable PPTX, explain bitmap-first production plus optional Gorden/PowerPoint Copilot reconstruction. Ask only for a missing route; preserve a route already selected.
 - If Deckit was explicitly invoked, or if the user asks for generated images packaged as PPTX, generate PNGs first, then place those PNGs into a PPTX as a non-editable container.
 - If the user asks for PDF output, still generate PNGs first, then package the PNGs into an image-only PDF.

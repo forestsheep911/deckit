@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/tt-a1i/archify",
+  "version": "3.2.0",
+  "commit": "25cf37080fc8b1dbe758a4efc3935b55f3327083",
+  "subset": [
+    "renderers/shared",
+    "renderers/workflow",
+    "schemas/common.schema.json",
+    "schemas/workflow.schema.json",
+    "locales",
+    "assets/template.html",
+    "assets/JetBrainsMono-OFL.txt"
+  ],
+  "changes": "Pinned workflow/shared subset. generated-brand-marks.mjs is replaced with an empty catalog, so third-party brand vectors are not distributed. assets/template.html contains only the upstream style/font blocks; viewer scripts/markup are omitted. Trailing whitespace in the extracted CSS and workflow compiler is removed. Unused workflow README and CLI entrypoint are omitted. Other retained upstream files are unmodified. The Deckit adapter lives outside this directory; no updater, global skill, explainer or examples are installed."
+}

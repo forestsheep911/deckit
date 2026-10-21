@@ -1,0 +1,115 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "审批通过后执行，驳回后补充材料",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "work/diagrams/03_approval_flow/slide.html",
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "申请动作"
+        },
+        "backend": {
+          "label": "执行动作"
+        },
+        "security": {
+          "label": "审批判断"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "requester",
+      "label": "申请人"
+    },
+    {
+      "id": "reviewer",
+      "label": "审批人"
+    },
+    {
+      "id": "executor",
+      "label": "执行人"
+    }
+  ],
+  "mainPath": [
+    "submit",
+    "review",
+    "execute",
+    "done"
+  ],
+  "nodes": [
+    {
+      "id": "submit",
+      "lane": "requester",
+      "col": 0,
+      "type": "frontend",
+      "label": "提交申请"
+    },
+    {
+      "id": "review",
+      "lane": "reviewer",
+      "col": 1,
+      "type": "security",
+      "label": "核对与审批"
+    },
+    {
+      "id": "revise",
+      "lane": "requester",
+      "col": 2,
+      "type": "frontend",
+      "label": "补充材料"
+    },
+    {
+      "id": "execute",
+      "lane": "executor",
+      "col": 3,
+      "type": "backend",
+      "label": "执行处理"
+    },
+    {
+      "id": "done",
+      "lane": "executor",
+      "col": 4,
+      "type": "backend",
+      "label": "记录结果"
+    }
+  ],
+  "edges": [
+    {
+      "id": "submit_review",
+      "from": "submit",
+      "to": "review",
+      "label": "送审"
+    },
+    {
+      "id": "approve",
+      "from": "review",
+      "to": "execute",
+      "label": "通过",
+      "variant": "emphasis"
+    },
+    {
+      "id": "reject",
+      "from": "review",
+      "to": "revise",
+      "label": "驳回",
+      "variant": "security"
+    },
+    {
+      "id": "resubmit",
+      "from": "revise",
+      "to": "review",
+      "label": "重新送审",
+      "variant": "dashed"
+    },
+    {
+      "id": "complete",
+      "from": "execute",
+      "to": "done",
+      "label": "完成"
+    }
+  ]
+}

@@ -7,7 +7,7 @@ description: Main Deckit coordinator for end-to-end image-first deck production.
 
 Act as the production owner for Deckit deck work. Optimize for a usable image-first presentation under real constraints: source quality, token budget, time, image generation cost, and requested output.
 
-Deckit has one primary production route: **image-first with actual image generation, followed by review and image-container PPTX/PDF packaging**. After visual approval, the user may optionally choose element reconstruction through Gorden Super PPT Skills or Copilot inside PowerPoint. Reconstruction is off by default and never replaces image generation.
+Deckit has one primary production route: **image-first with actual image generation, followed by review and image-container PPTX/PDF packaging**. Only selected complex workflow pages may use the bundled `complex-flow` renderer to create a non-editable full-slide PNG; follow [the page-level routing rule](../../references/complex-flows.md). Simple flows and all ordinary pages stay on imagegen. After visual approval, the user may optionally choose element reconstruction through Gorden Super PPT Skills or Copilot inside PowerPoint. Reconstruction is off by default.
 
 ## Invocation Default
 
@@ -40,7 +40,7 @@ Minimum default output for an explicit Deckit invocation is a complete Deckit de
 1. `work/deck-brief.md`
 2. `work/storyboard.md`
 3. `prompts/README.md` and `prompts/<slide-id>.md`
-4. `assets/generated-slides/<slide-id>.png` from the official `$imagegen` skill
+4. `assets/generated-slides/<slide-id>.png` from official `$imagegen`, except selected complex-flow pages with retained source and render receipts
 5. the chosen packaged final delivery target; default is `dist/<deck-name>.pptx` as a non-editable image container
 6. `dist/review.md` and, for PPTX, an audit result
 
@@ -195,7 +195,7 @@ Never satisfy ambiguous requests such as "make a PPT", "create a PowerPoint", "m
 
 > Create an image-first presentation: brief, storyboard, image prompts, and generated full-slide images.
 
-Do not ask users to choose between image-first and direct native generation. A `.pptx` request alone means an image-container package after `$imagegen` produces slide PNGs. The baseline package must contain one generated full-slide image per page. Optional reconstruction is a later stage with its own derivative and acceptance checks.
+Do not ask users to choose between image-first and direct native generation. A `.pptx` request alone means an image-container package after the required slide PNGs exist. Ordinary pages require `$imagegen`; a selected complex-flow page uses its checked screenshot. The baseline package must contain one full-slide image per page. Optional reconstruction is a later stage with its own derivative and acceptance checks.
 
 If the user explicitly requires editable PowerPoint objects, explain the sequence and offer the two reconstruction methods:
 
@@ -205,7 +205,7 @@ If the user explicitly requires editable PowerPoint objects, explain the sequenc
 
 Visual polish does not make a deck image-first. A visually designed PowerPoint file is still native-PPTX if its slides contain editable text boxes, PowerPoint shapes, lines, charts, tables, or layout objects.
 
-If `$imagegen` is truly unavailable or fails, and therefore `assets/generated-slides/<slide-id>.png` cannot be produced for every storyboard slide, do not deliver PPTX/PDF packages or preview images. Stop at the prompt pack and say generated slide images are pending. Do not choose this branch merely because the user has not written a separate "continue" message.
+If `$imagegen` is truly unavailable or fails for an ordinary page, do not deliver an incomplete PPTX/PDF or preview. Stop at the available artifacts and report which pages are pending. The complex-flow exception cannot replace missing imagegen on ordinary pages. Likewise a failed diagram page remains pending. Do not choose this branch merely because the user has not written a separate "continue" message.
 
 Do not treat the built-in `$imagegen` tool's lack of a destination-path argument as unavailability. In normal built-in mode, `$imagegen` saves generated images under `$CODEX_HOME/generated_images/...`; for Deckit runs, generate first, then copy or move the selected output PNGs into `<run-folder>/assets/generated-slides/<slide-id>.png`.
 
@@ -276,7 +276,7 @@ If the user requests multiple final delivery targets, produce the primary reques
 5. Record the requested final delivery target and target slide/page count when known.
 6. Select the minimum specialist workflow needed.
 7. Keep intermediate artifacts in predictable paths.
-8. Invoke the official `$imagegen` skill to generate full-slide images from the prompt pack unless the user explicitly asked for a partial/text-only artifact or `$imagegen` is truly unavailable. In built-in mode, copy or move generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`.
+8. Generate ordinary pages with official `$imagegen`; render only the selected complex-flow pages through their bundled adapter. Review both methods and preserve their actual provenance. Honor partial/text-only requests and report missing dependencies. In built-in mode, copy or move generated images from `$CODEX_HOME/generated_images/...` into `assets/generated-slides/`.
 9. Package generated slide images according to the final delivery target, and ensure the standard preview artifact(s) are produced: `dist/preview.png` up to 32 slides, or numbered `dist/preview-XX.png` files above 32 slides. A missing repository development helper is not a packaging blocker; use a local image-container path that preserves the same invariants.
 10. Apply quality gates before calling the work done.
 11. If reconstruction was selected, invoke `native-reconstructor` after visual approval; verify dependencies and finish the agreed scope with separate acceptance. Otherwise deliver the bitmap result and offer reconstruction as an optional follow-up without starting it.
@@ -287,15 +287,15 @@ Use `../../references/workflow.md` for the production flow and `../../references
 
 The only active production mode is `image-first`.
 
-`visual-director` writes complete per-slide image-generation prompts. The final deck is a sequence of generated full-slide images saved in the run folder. Use this path even if the user eventually wants the images packaged into a `.pptx`.
+`visual-director` writes image-generation prompts for ordinary pages and matching treatments for selected complex-flow pages. The final deck is a sequence of reviewed full-slide PNGs saved in the run folder. Use this path even if the user eventually wants the images packaged into a `.pptx`.
 
 Hard rules:
 
 - A `.pptx` containing one full-slide PNG per slide is only a **packaging format** after the images already exist. It does not prove image-first generation by itself.
-- Programmatically drawing slide PNGs with local code (PIL, matplotlib, browser screenshots, SVG, HTML/CSS, or PowerPoint shapes) is local rendering, not image-first generation.
+- Programmatically drawn ordinary slides are not imagegen results. The bundled complex-flow screenshot is the sole selected-page exception and must carry its source and receipt.
 - Do not invoke third-party presentation/PPTX assemblers to replace primary image generation. The specific exception is user-selected downstream `GordenImage2PPTX` conversion, coordinated by `native-reconstructor` after visual approval.
-- If the user explicitly invokes Deckit, or asks to "generate images", "use gpt-image", "use gpt-image-2", or "image-first", invoke `$imagegen` for each slide image, then store the resulting PNGs under a path such as `assets/generated-slides/`.
-- `$imagegen` is the required handoff for actual slide image generation when that skill is available. Do not replace it with Python, PIL, browser screenshots, SVG, PowerPoint, or other local rendering code.
+- If the user explicitly invokes Deckit, or asks to "generate images", "use gpt-image", "use gpt-image-2", or "image-first", invoke `$imagegen` for ordinary slide images and the bundled adapter only for selected complex-flow pages, then store the resulting PNGs under a path such as `assets/generated-slides/`.
+- `$imagegen` is required for ordinary slide generation. Do not use the complex-flow exception or other local rendering code to replace ordinary generated pages.
 - If image generation is truly not available, stop after prompt production and say that generated slide images are pending; do not fake the generation step with local drawing code.
 - If the user explicitly asks for editable PowerPoint, keep image-first production and offer optional reconstruction; do not start direct native generation.
 
@@ -339,6 +339,7 @@ Use the run folder as the working root for specialist outputs.
 - Use `story-architect` when raw source material needs a deck-level thesis and narrative structure.
 - Use `slide-storyboarder` when a brief or outline needs page-by-page slide planning.
 - Use `visual-director` when a storyboard needs visual treatment or image prompts.
+- Use `complex-flow` only for individual complex workflow pages selected under [complex-flows.md](../../references/complex-flows.md); never for a simple process that imagegen can cover. Keep every other page on imagegen and the diagram page non-editable.
 - Use `native-reconstructor` only for user-selected reconstruction of approved bitmaps. If Microsoft 365 Copilot is unavailable in PowerPoint, offer cancellation or Gorden and wait for that choice.
 
 Do not run every specialist by default. Skip steps that the user's input already satisfies.
@@ -374,7 +375,7 @@ Before delivery, verify that:
 - Slide titles are specific and presentable.
 - The sequence has a logical arc.
 - Visual direction supports the argument.
-- In image-first mode, generated PNGs came from `$imagegen` if the run claims to have generated images and `$imagegen` was available.
+- Ordinary slide PNGs came from actual `$imagegen`; each complex-flow exception has a storyboard reason, retained graph, exact PNG hash, layout/browser receipt and actual visual review. Never describe a rendered screenshot as an imagegen result.
 - The chosen workflow fits the user's budget and timing.
 - `production_mode` is recorded as `image-first` in `run.json` and the brief's "Skill Notes".
 

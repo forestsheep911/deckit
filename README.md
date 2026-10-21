@@ -2,9 +2,9 @@
 
 Deckit is a Codex plugin for producing image-first presentation decks end to end.
 
-Current release: **v0.5.0**.
+Current release: **v0.6.0**.
 
-v0.5.0 adds optional bitmap-to-element reconstruction through Gorden Super PPT Skills or Copilot inside PowerPoint. Reconstruction remains off by default; unavailable PowerPoint Copilot offers cancellation or Gorden.
+v0.6.0 adds optional complex-flow screenshot pages: exact branches, merges, retries and cross-role handoffs can use a bundled Archify renderer on selected pages. Simple flows and other pages keep official image generation. Baseline PPTX/PDF delivery remains bitmap-only. Existing optional downstream Gorden/Copilot reconstruction is unchanged.
 
 ## What Deckit Does
 
@@ -42,7 +42,7 @@ That means:
 - `.pptx` output is a non-editable image-container deck, with one full-slide image per slide;
 - `.pdf` output is image-only delivery built from generated slide images;
 - generated slide PNGs are retained as intermediate artifacts;
-- Deckit should not substitute native PowerPoint shapes, browser-rendered slides, SVG screenshots, or generic presentation plugins for the image-generation step.
+- Ordinary pages must use actual imagegen. Only selected complex-flow pages may use the bundled, checked screenshot route; this exception does not switch the rest of the deck to rendered slides or native PowerPoint shapes.
 
 Reconstruction is off by default. After bitmap review, users can choose `NONE`, `GORDEN`, or `COPILOT`, for the whole deck or selected pages:
 
@@ -51,6 +51,14 @@ Reconstruction is off by default. After bitmap review, users can choose `NONE`, 
 - If PowerPoint Copilot is unavailable, explicitly offer **cancel reconstruction** or **use Gorden**; never switch automatically. If Gorden is missing, explain the installation requirement.
 
 Preserve the bitmap delivery and store reconstructed derivatives under `dist/native/<conversion-id>/`. Verify structure, visual fidelity, and actual editing/save/close/reopen separately. See [reconstruction workflow](plugins/deckit/references/native-reconstruction.md). Source instructions coordinate external tools; they do not bundle Gorden or Microsoft 365 Copilot.
+
+## Complex Workflow Pages
+
+Select this route per page only when exact branches, merges, retries or cross-role swimlanes need more precision than an ordinary generated image. A simple linear process stays on imagegen. For example, one middle process page can be rendered while the cover, benefits and closing remain generated.
+
+The bundled `complex-flow` skill retains workflow JSON and render receipts, checks layout and actual browser readability, and captures a clean 3200×1800 slide PNG. Node.js 22+ and an existing Chrome/Edge/Chromium are required for this optional route only; no global Archify installation, npm packages, account or API key is required. Initial capture supports 16:9. Review actual images before the normal one-picture-per-slide package with notes and previews.
+
+This release does not export native editable nodes or connectors. Future native export can use the retained graph. See [routing and acceptance](plugins/deckit/references/complex-flows.md), [skill](plugins/deckit/skills/complex-flow/SKILL.md), and [v0.6.0 release notes](docs/release-v0.6.0.md).
 
 ## Marketplace Installation
 
@@ -69,7 +77,7 @@ The marketplace entry should point to this repository as a git subdirectory sour
     "source": "git-subdir",
     "url": "forestsheep911/deckit",
     "path": "plugins/deckit",
-    "ref": "v0.5.0"
+    "ref": "v0.6.0"
   }
 }
 ```
@@ -77,7 +85,7 @@ The marketplace entry should point to this repository as a git subdirectory sour
 Useful verification commands:
 
 ```powershell
-git ls-remote --tags https://github.com/forestsheep911/deckit.git refs/tags/v0.5.0
+git ls-remote --tags https://github.com/forestsheep911/deckit.git refs/tags/v0.6.0
 ```
 
 ```powershell
@@ -136,6 +144,6 @@ See `AGENTS.md` for the detailed release and Windows marketplace-upgrade trouble
 
 - `docs/install-and-use.md` — local install and workflow notes.
 - `docs/development-layout.md` — repository layout and dev-tool notes.
-- `docs/v1-status.md` — current V1 status, updated for v0.5.0.
+- `docs/v1-status.md` — current V1 status, updated for v0.6.0.
 - `docs/production-mode-insights.md` — archived production-mode research.
 - `docs/pptx-native-experiment.md` — archived native-PPTX experiment notes.

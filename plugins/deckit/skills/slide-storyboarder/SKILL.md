@@ -17,6 +17,7 @@ Write a storyboard, usually at `work/storyboard.md`, where each slide includes:
 - Core claim.
 - 2-4 support points.
 - Recommended slide archetype.
+- Visual method: default `imagegen`. Only choose `complex-flow` for a page whose precise branching, merging, retry or cross-role relationships need it; include a concrete routing reason. Simple processes stay generated. Follow [page-level selection](../../references/complex-flows.md).
 - Speaker notes for the PowerPoint notes pane on every slide.
 
 Use `../../references/slide-archetypes.md` when choosing slide types.
@@ -44,6 +45,7 @@ Examples: `00_cover`, `03_production_team`, `07_closing`.
 - Add `- **Speaker notes**:` to every slide. Write this as presenter-facing talk-track guidance, not visible slide copy: what to say first, the core point to emphasize, how to use the support points, and any transition into the next slide.
 - Include transitions in speaker notes when the deck's logic could feel abrupt.
 - Do not write visual descriptions, palette choices, or image prompts; that is the job of `visual-director`.
+- Select the visual method per page; one complex middle page does not switch the cover, benefits, closing or other ordinary pages away from imagegen. Retain the flow's exact conditions and speaker notes.
 
 ## Slide Count Bands
 
